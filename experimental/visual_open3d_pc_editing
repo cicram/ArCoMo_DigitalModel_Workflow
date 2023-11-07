@@ -1,0 +1,66 @@
+import open3d as o3d
+import numpy as np
+
+class PointCloudEditor:
+    def __init__(self, original_cloud_path, edited_cloud_path):
+        # Load the original point cloud and color it red
+        self.original_pcd = o3d.io.read_point_cloud(original_cloud_path)
+        self.original_pcd.paint_uniform_color([1, 0, 0])  # Red
+
+        # Load the edited point cloud and color it blue
+        self.edited_pcd = o3d.io.read_point_cloud(edited_cloud_path)
+        self.edited_pcd.paint_uniform_color([0, 0, 1])  # Blue
+
+        # Create a visualization window
+        self.vis = o3d.visualization.VisualizerWithKeyCallback()
+        self.vis.create_window()
+
+        # Add both point clouds to the visualization
+        self.vis.add_geometry(self.original_pcd)
+        self.vis.add_geometry(self.edited_pcd)
+
+        # Initialize selected indices for the blue point cloud
+        self.selected_indices = []
+
+        # Register key callback for selection
+        self.vis.register_key_callback(ord("A"), self.select_points)
+        self.vis.register_key_callback(ord("R"), self.remove_selected_points)
+
+    def pick_points(self):
+        print("Demo for manual geometry cropping")
+        print("1) Press 'Y' twice to align geometry with negative direction of y-axis")
+        print("2) Press 'K' to lock screen and to switch to selection mode")
+        print("3) Drag for rectangle selection,")
+        print("   or use ctrl + left click for polygon selection")
+        print("4) Press 'C' to get a selected geometry and to save it")
+        print("5) Press 'F' to switch to freeview mode")
+        vis2 = o3d.visualization.draw_geometries_with_editing([self.original_pcd])
+        return vis2.get_picked_points()  # a list of indices of picked points
+
+
+    def select_points(self, action): 
+        # Get the clicked point and its index
+        picked_indices = self.pick_points()
+        if picked_indices:
+            picked_index = picked_indices[0]
+            self.selected_indices.append(picked_index)
+            print(f"Selected point with index {picked_index}")
+
+    def remove_selected_points(self, action):
+        # Remove the selected points from the edited point cloud
+        if self.selected_indices:
+            self.edited_pcd.points = o3d.utility.Vector3dVector(
+                [p for i, p in enumerate(np.asarray(self.edited_pcd.points)) if i not in self.selected_indices]
+            )
+            self.selected_indices = []
+            self.vis.update_geometry(self.edited_pcd)
+
+    def run(self):
+        print("Press 'A' to select points in the blue point cloud.")
+        print("Press 'R' to remove selected points from the blue point cloud.")
+        self.vis.run()
+        self.vis.destroy_window()
+
+if __name__ == "__main__":
+    editor = PointCloudEditor("original_cropped.pcd", "original_cropped2.pcd")
+    editor.run()

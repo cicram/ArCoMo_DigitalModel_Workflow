@@ -1,0 +1,106 @@
+import vtkmodules.all as vtk
+import sys
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QMouseEvent
+
+class PointCloudViewer(QMainWindow):
+    def __init__(self, pc_line, output_filename):
+        super().__init__()
+        self.pc_line = pc_line
+        self.output_filename = output_filename
+        self.point1 = None
+        self.point2 = None
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle('3D Point Cloud Viewer')
+        self.setGeometry(100, 100, 800, 600)
+
+        self.vtkWidget = QVTKWidget(self)
+        self.setCentralWidget(self.vtkWidget)
+
+        self.ren = vtk.vtkRenderer()
+        self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
+        self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
+
+        points = vtk.vtkPoints()
+        colors = vtk.vtkUnsignedCharArray()
+        colors.SetNumberOfComponents(3)
+
+        for i in range(len(self.pc_line)):
+            points.InsertNextPoint(self.pc_line[i])
+            colors.InsertNextTuple([0, 0, 0])  # Set point colors to black
+
+        self.pcd = vtk.vtkPolyData()
+        self.pcd.SetPoints(points)
+        self.pcd.GetPointData().SetScalars(colors)
+
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputData(self.pcd)
+
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper)
+
+        self.ren.AddActor(actor)
+        self.iren.AddObserver("LeftButtonPressEventEvent", self.onLeftClick)
+        self.iren.AddObserver("KeyPressEvent", self.onKeyPress)
+        self.iren.Initialize()
+
+    def onLeftClick(self, obj, event):
+        clickPos = self.iren.GetEventPosition()
+        picker = vtk.vtkPropPicker()
+        picker.Pick(clickPos[0], clickPos[1], 0, self.ren)
+        pickedPoint = picker.GetPickPosition()
+
+        if self.point1 is None:
+            self.point1 = pickedPoint
+            self.setPointColor(self.point1, [0, 255, 0])  # Mark the selected point in green
+        elif self.point2 is None:
+            self.point2 = pickedPoint
+            self.setPointColor(self.point2, [0, 0, 255])  # Mark the selected point in blue
+        self.vtkWidget.GetRenderWindow().Render()
+
+    def onKeyPress(self, obj, event):
+        key = self.iren.GetKeySym()
+        if key == "space" and self.point1 is not None and self.point2 is not None:
+            with open(self.output_filename, 'w') as file:
+                file.write(f"Point 1: {self.point1}\n")
+                file.write(f"Point 2: {self.point2}\n")
+
+    def setPointColor(self, point, color):
+        for i in range(self.pcd.GetNumberOfPoints()):
+            p = self.pcd.GetPoint(i)
+            if p == point:
+                self.pcd.GetPointData().GetScalars().SetTuple(i, color)
+
+import numpy as np
+def parse_point_cloud_centerline(file_path):
+    flag_header = False
+    data = []
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            parts = line.split()
+            if len(parts) == 21:  # Ensure the line has at least 3 values
+                if not flag_header:
+                    flag_header = True
+                else:
+                    px, py, pz = float(parts[0]), float(parts[1]), float(parts[2])
+                    data.append((px, py, pz))
+            else:
+                flag_header = False
+
+    data = np.array(data)
+    return data
+
+if __name__ == "__main__":
+
+    file_path = "workflow_data/centerline.txt"
+    pc_centerline = parse_point_cloud_centerline(file_path)
+    output_filename = "selected_points.txt"
+
+    app = QApplication(sys.argv)
+    viewer = PointCloudViewer(pc_centerline, output_filename)
+    viewer.show()
+    sys.exit(app.exec_())

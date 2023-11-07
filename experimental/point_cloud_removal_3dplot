@@ -1,0 +1,149 @@
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.widgets import Button, LassoSelector
+from matplotlib.path import Path
+import numpy as np
+
+def parse_lumen_point_cloud(file_path):
+    # Initialize lists to store the parsed values
+    data = []
+    # Open the text file for reading
+    with open(file_path, 'r') as file:
+        for line in file:
+            # Split the line into three values
+            parts = line.strip().split()
+
+            # Ensure there are three values on each line
+            if len(parts) == 3:
+                # Parse the values as floats and append them to the respective lists
+                px, py, pz = float(parts[0]), float(parts[1]), float(parts[2])
+                data.append((px, py, pz))
+            else:
+                print(f"Skipping invalid line: {line.strip()}")
+
+    return np.array(data)
+
+def parse_point_cloud_CT_lumen(file_path):
+    # Initialize lists to store the parsed values
+    data = []
+    # Open the text file for reading
+    with open(file_path, 'r') as file:
+        for line in file:
+            # Split the line into three values
+            parts = line.strip().split()
+
+            # Ensure there are three values on each line
+            if len(parts) == 3:
+                # Parse the values as floats and append them to the respective lists
+                px, py, pz = float(parts[0]), float(parts[1]), float(parts[2])
+                data.append((px, py, pz))
+            else:
+                print(f"Skipping invalid line: {line.strip()}")
+    # Convert each inner list to strings with spaces between elements
+    formatted_data = [' '.join(map(str, inner)) for inner in data]
+
+    # Convert the formatted strings back to a list of lists
+    result = [list(map(float, inner.split())) for inner in formatted_data]
+    return np.array(result)
+
+# Sample point clouds (replace with your own data)
+file_path_2 = "ArCoMo6_lumen_pp.txt"  # Replace with the path to your text file
+file_path_3 = "saved_registered_splines.txt"
+point_cloud1 = parse_point_cloud_CT_lumen(file_path_2)
+point_cloud2 = parse_lumen_point_cloud(file_path_3)
+
+# Create a figure for the 3D view
+fig = plt.figure(figsize=(8, 8))
+ax3d = fig.add_subplot(111, projection='3d')
+
+# Plot 3D point clouds
+scatter1 = ax3d.scatter(point_cloud1[:, 0], point_cloud1[:, 1], point_cloud1[:, 2], c='b', marker='o', label='Cloud 1')
+scatter2 = ax3d.scatter(point_cloud2[:, 0], point_cloud2[:, 1], point_cloud2[:, 2], c='r', marker='x', label='Cloud 2')
+
+ax3d.set_xlabel('X')
+ax3d.set_ylabel('Y')
+ax3d.set_zlabel('Z')
+
+# Initialize selected indices
+selected_indices = set()
+
+# Function to handle 3D lasso selection
+def on3dlasso(vertices):
+    # Convert vertices to a Path
+    path = Path(vertices)
+    print(path)
+    # Clear the selected indices
+    selected_indices.clear()
+
+    # Check if each point in point_cloud1 is inside the lasso path
+    for i, point in enumerate(point_cloud1):
+        if path.contains_point((point[0], point[1], point[2])):
+            print("point in path")
+            selected_indices.add(i)
+
+    update_selection()
+
+lasso_3d = LassoSelector(ax3d, on3dlasso)
+
+# Function to update the selection appearance in the 3D view
+def update_selection():
+    mask = np.ones_like(point_cloud1[:, 0], dtype=bool)
+    mask[list(selected_indices)] = False
+    new_point_cloud1 = point_cloud1[mask]
+
+    ax3d.clear()
+    scatter1 = ax3d.scatter(new_point_cloud1[:, 0], new_point_cloud1[:, 1], new_point_cloud1[:, 2], c='b', marker='o', label='Cloud 1')
+    scatter2 = ax3d.scatter(point_cloud2[:, 0], point_cloud2[:, 1], point_cloud2[:, 2], c='r', marker='x', label='Cloud 2', alpha=0.5)
+
+    ax3d.set_xlabel('X')
+    ax3d.set_ylabel('Y')
+    ax3d.set_zlabel('Z')
+
+    fig.canvas.draw()
+
+# Create a button to remove selected points
+ax_remove_button = plt.axes([0.8, 0.01, 0.1, 0.04])
+remove_button = Button(ax_remove_button, 'Remove Selected')
+
+def remove_selection(event):
+    global point_cloud1, removed_points
+    for i in sorted(selected_indices, reverse=True):
+        removed_points.append(point_cloud1[i])
+        point_cloud1 = np.delete(point_cloud1, i, axis=0)
+    selected_indices.clear()
+    update_selection()
+
+remove_button.on_clicked(remove_selection)
+
+# Create a button to save the point cloud
+ax_save_button = plt.axes([0.65, 0.01, 0.1, 0.04])
+save_button = Button(ax_save_button, 'Save Point Cloud')
+
+def save_point_cloud(event):
+    global new_point_cloud1
+    if len(new_point_cloud1) > 0:
+        #np.savetxt('point_cloud.txt', np.array(new_point_cloud1), delimiter=', ', fmt='%.6f')
+        pass
+    plt.close()
+
+save_button.on_clicked(save_point_cloud)
+
+# Variable to track the mode (lasso or move)
+lasso_mode = True
+
+# Function to toggle lasso selection mode with spacebar
+def toggle_lasso_mode(event):
+    global lasso_mode
+    lasso_mode = not lasso_mode
+    if lasso_mode:
+        #lasso_3d.set_active(True)
+        # Disable plot rotation
+        ax3d.disable_mouse_rotation()
+    else:
+        #lasso_3d.set_active(False)
+        # Disable plot rotation
+        ax3d.mouse_init(rotate_btn=1, pan_btn=2, zoom_btn=3)
+
+fig.canvas.mpl_connect('key_press_event', toggle_lasso_mode)
+
+plt.show()

@@ -1,0 +1,231 @@
+import vtkmodules.all as vtk
+import numpy as np
+import open3d as o3d
+
+def CreateButtonOff(image):
+    white = [155, 155, 155]
+    CreateImage(image, white, white)
+
+def CreateButtonOn(image):
+    white = [155, 155, 155]
+    blue = [20, 30, 155]
+    CreateImage(image, white, blue)
+
+def CreateImage(image, color1, color2):
+    size = 12
+    dims = [size, size, 1]
+    lim = size / 3.0
+
+    # Specify the size of the image data
+    image.SetDimensions(dims[0], dims[1], dims[2])
+    arr = vtk.vtkUnsignedCharArray()
+    arr.SetNumberOfComponents(3)
+    arr.SetNumberOfTuples(dims[0] * dims[1])
+    arr.SetName('scalars')
+
+    # Fill the image with colors
+    for y in range(dims[1]):
+        for x in range(dims[0]):
+            if x >= lim and x < 2 * lim and y >= lim and y < 2 * lim:
+                arr.SetTuple3(y*size + x, color2[0], color2[1], color2[2])
+            else:
+                arr.SetTuple3(y*size + x, color1[0], color1[1], color1[2])
+
+    image.GetPointData().AddArray(arr)
+    image.GetPointData().SetActiveScalars('scalars')
+
+# Define a function to create a VTK actor from a point cloud
+def create_point_cloud_actor(points, color):
+    vtk_points = vtk.vtkPoints()
+    vtk_cells = vtk.vtkCellArray()
+
+    for point in points:
+        vtk_id = vtk_points.InsertNextPoint(point)
+        vtk_cells.InsertNextCell(1)
+        vtk_cells.InsertCellPoint(vtk_id)
+
+    poly_data = vtk.vtkPolyData()
+    poly_data.SetPoints(vtk_points)
+    poly_data.SetVerts(vtk_cells)
+
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputData(poly_data)
+
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetColor(color)
+
+    return actor
+
+# Create a VTK render window
+render_window = vtk.vtkRenderWindow()
+
+style = vtk.vtkInteractorStyleTrackballCamera()
+
+# Create a VTK render window interactor
+render_window_interactor = vtk.vtkRenderWindowInteractor()
+render_window_interactor.SetInteractorStyle(style)
+render_window_interactor.SetRenderWindow(render_window)
+
+style.AddObserver("RightButtonPressEvent", lambda obj, event: point_pick_callback(obj, event))
+style.AddObserver("RightButtonReleaseEvent", lambda obj, event: point_pick_callback(obj, event))
+
+render_window_interactor.SetInteractorStyle(style)
+
+# Load your point clouds (replace these paths with your own)
+point_cloud1 = np.random.rand(100, 3)  # Replace with your first point cloud data
+point_cloud2 = np.random.rand(100, 3)  # Replace with your second point cloud data
+
+# Create VTK actors for the point clouds
+actor1 = create_point_cloud_actor(point_cloud1, [1, 0, 0])  # Red
+actor2 = create_point_cloud_actor(point_cloud2, [0, 0, 1])  # Blue
+
+actor1.GetProperty().SetPointSize(5)  # Adjust the point size as needed
+actor2.GetProperty().SetPointSize(5)
+
+# Create a VTK renderer
+renderer = vtk.vtkRenderer()
+renderer.AddActor(actor1)
+renderer.AddActor(actor2)
+renderer.SetBackground(1.0, 1.0, 1.0)  # White background
+
+# Set up the renderer and render window
+render_window.AddRenderer(renderer)
+render_window.SetWindowName("VTK Point Cloud Selection")
+
+# Enable point selection
+point_picker = vtk.vtkPointPicker()
+render_window_interactor.SetPicker(point_picker)
+
+# Create a list to keep track of selected points
+selected_points = []
+
+# Function to highlight selected points
+def highlight_selected_points():
+    global selected_points
+    global actor2  # Reference to the blue point cloud actor
+    mapper = actor2.GetMapper()
+    actor_points = mapper.GetInput()
+    colors = vtk.vtkUnsignedCharArray()
+    colors.SetNumberOfComponents(3)
+    colors.SetName("Colors")
+    
+    for i in range(actor_points.GetNumberOfPoints()):
+        if i in selected_points:
+            colors.InsertNextTuple([0, 255, 0])  # Highlight in green
+        else:
+            colors.InsertNextTuple([0, 0, 255])  # Blue for the blue point cloud
+    
+    actor_points.GetPointData().SetScalars(colors)
+
+# Function to remove selected points
+def remove_selected_points():
+    global selected_points
+    global point_cloud2
+    point_cloud_passed = np.delete(point_cloud2, selected_points, axis=0)
+
+    # Clear the selected points list
+    selected_points = []
+    
+    # Update the actors to reflect the changes
+    update_actors(point_cloud_passed)
+    point_cloud2 = point_cloud_passed
+
+# Function to update the actors with modified point clouds
+def update_actors(point_cloud_passed):
+    global actor2
+    renderer.RemoveActor(actor2)
+    actor2 = create_point_cloud_actor(point_cloud_passed, [0, 0, 1])  # Blue
+    actor2.GetProperty().SetPointSize(5)
+    renderer.AddActor(actor2)
+    render_window.Render()
+
+# Callback function for point selection
+def point_pick_callback(obj, event):
+    global drawing_area, area_start, area_end, selected_points
+    # Handle drawing the selection area here
+    click_pos = render_window_interactor.GetEventPosition()
+
+    if event == "RightButtonPressEvent":
+        style.AddObserver("MouseMoveEvent", lambda obj, event: point_pick_callback(obj, event))
+        area_start = click_pos
+        area_end = click_pos
+    elif event == "MouseMoveEvent":
+        area_end = click_pos
+    elif event == "RightButtonReleaseEvent":
+        #style.RemoveObserver("MouseMoveEvent")
+        # Capture points within the defined area
+        points_in_area = capture_points_in_area(area_start, area_end)
+        selected_points.extend(points_in_area)
+        highlight_selected_points()
+        render_window.Render()
+
+        print(f"Selected points: {selected_points}")
+
+
+def capture_points_in_area(start, end):
+    selected_ids = []
+    bounds = [min(start[0], end[0]), max(start[0], end[0]), min(start[1], end[1]), max(start[1], end[1])]
+    print(bounds)
+    for i in range(actor2.GetMapper().GetInput().GetNumberOfPoints()):
+        point = actor2.GetMapper().GetInput().GetPoint(i)
+        if bounds[0] <= point[0] <= bounds[1] and bounds[2] <= point[1] <= bounds[3]:
+            selected_ids.append(i)
+
+    return selected_ids
+
+
+# Callback function for removing selected points
+def remove_points_callback(obj, event):
+    remove_selected_points()
+    print(f"Removed selected points. Remaining points: {len(point_cloud2)}")
+
+# Create a VTK button to remove selected points
+remove_button = vtk.vtkTexturedButtonRepresentation2D()
+remove_button.SetNumberOfStates(2)
+button_texture_1 = vtk.vtkImageData()  # Create an empty vtkImageData
+button_texture_2 = vtk.vtkImageData()  # Create an empty vtkImageData
+
+CreateButtonOff(button_texture_1)
+CreateButtonOn(button_texture_2)
+
+remove_button.SetButtonTexture(0, button_texture_1)
+remove_button.SetButtonTexture(1, button_texture_2)
+
+remove_button_widget = vtk.vtkButtonWidget()
+remove_button_widget.SetInteractor(render_window_interactor)
+remove_button_widget.SetRepresentation(remove_button)
+remove_button_widget.AddObserver("StateChangedEvent", remove_points_callback)
+
+# Callback function for right mouse button press (pan) when not in selection mode
+def pan_callback(obj, event):
+    if not selection_mode:
+        render_window_interactor.GetInteractorStyle().OnRightButtonDown()
+        render_window.Render()
+
+# Start the VTK interactor
+render_window.Render()
+
+# Here the widget placement is in normalized display coordinates
+upperRight = vtk.vtkCoordinate()
+upperRight.SetCoordinateSystemToNormalizedDisplay()
+upperRight.SetValue(1.0, 1.0)
+
+bds = [0]*6
+sz = 50.0
+bds[0] = upperRight.GetComputedDisplayValue(renderer)[0] - sz
+bds[1] = bds[0] + sz
+bds[2] = upperRight.GetComputedDisplayValue(renderer)[1] - sz
+bds[3] = bds[2] + sz
+bds[4] = bds[5] = 0.0
+
+# Scale to 1, default is .5
+remove_button.SetPlaceFactor(1)
+remove_button.PlaceWidget(bds)
+remove_button_widget.On()
+
+# Set selection mode
+selection_mode = False
+
+# Begin mouse interaction
+render_window_interactor.Start()
