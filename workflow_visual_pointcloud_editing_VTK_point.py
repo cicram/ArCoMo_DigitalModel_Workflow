@@ -2,9 +2,23 @@ import vtkmodules.all as vtk
 import numpy as np
 
 class point_cloud_visual_editing:
-    # ----------------------------------------------------------------------- #
-    # Data parsing #
-    # ----------------------------------------------------------------------- #
+    def __init__(self):
+        self.point_cloud1 = None
+        self.point_cloud2 = None
+        self.actor1 = None
+        self.actor2 = None
+        self.renderer = None
+        self.render_window = None
+        self.render_window_interactor = None
+        self.point_picker = None
+        self.selected_points_red = []
+        self.selected_points_blue = []
+        self.switch_state = 0
+        self.switch_text_actor = None
+        self.radius_slider = None
+        self.radius_text_actor = None
+
+    # Data parsing functions
 
     def parse_lumen_point_cloud(self, file_path):
         data = []
@@ -32,12 +46,7 @@ class point_cloud_visual_editing:
         result = [list(map(float, inner.split())) for inner in formatted_data]
         return np.array(result)
 
-
-
-
-    # ----------------------------------------------------------------------- #
-    # Button creation helper functions #
-    # ----------------------------------------------------------------------- #
+    # Button creation helper functions
 
     def CreateButtonOff(self, image):
         white = [155, 155, 155]
@@ -68,10 +77,7 @@ class point_cloud_visual_editing:
         image.GetPointData().AddArray(arr)
         image.GetPointData().SetActiveScalars('scalars')
 
-
-    # ----------------------------------------------------------------------- #
-    # Renderer set up #
-    # ----------------------------------------------------------------------- #
+    # Renderer setup and point cloud actor creation
 
     def create_point_cloud_actor(self, points, color):
         vtk_points = vtk.vtkPoints()
@@ -95,32 +101,15 @@ class point_cloud_visual_editing:
 
         return actor
 
-
-
-    def add_new_style_right_button(self, render_window, render_window_interactor):
-        style = vtk.vtkInteractorStyleTrackballCamera()
-        render_window_interactor.SetInteractorStyle(style)
-        render_window_interactor.SetRenderWindow(render_window)
-        style.AddObserver("RightButtonPressEvent", lambda obj, event: self.point_pick_callback(obj, event))
-        render_window_interactor.SetInteractorStyle(style)
-
-    
-
-
-    # ----------------------------------------------------------------------- #
-    # Data handling functions #
-    # ----------------------------------------------------------------------- #
+    # Helper function to highlight selected points
 
     def highlight_selected_points(self):
-        global selected_points_blue, selected_points_red, switch_state
-        global actor2, actor1
-
-        if switch_state == 0:
-            mapper = actor2.GetMapper()
-            selected_points = selected_points_blue
-        else: 
-            mapper = actor1.GetMapper()
-            selected_points = selected_points_red
+        if self.switch_state == 0:
+            mapper = self.actor2.GetMapper()
+            selected_points = self.selected_points_blue
+        else:
+            mapper = self.actor1.GetMapper()
+            selected_points = self.selected_points_red
 
         actor_points = mapper.GetInput()
         colors = vtk.vtkUnsignedCharArray()
@@ -131,36 +120,37 @@ class point_cloud_visual_editing:
             if i in selected_points:
                 colors.InsertNextTuple([0, 255, 0])
             else:
-                if switch_state == 0:
+                if self.switch_state == 0:
                     colors.InsertNextTuple([0, 0, 255])
-                else: 
+                else:
                     colors.InsertNextTuple([255, 0, 0])
 
         actor_points.GetPointData().SetScalars(colors)
 
+    # Update actors based on the switch state
+
     def update_actors(self):
-        global actor2, actor1, switch_button, point_cloud2, point_cloud1
-        if switch_state == 0:
-            renderer.RemoveActor(actor2)
-            actor2 = self.create_point_cloud_actor(point_cloud2, [0, 0, 1])
-            actor2.GetProperty().SetPointSize(5)
-            renderer.AddActor(actor2)
+        if self.switch_state == 0:
+            self.renderer.RemoveActor(self.actor2)
+            self.actor2 = self.create_point_cloud_actor(self.point_cloud2, [0, 0, 1])
+            self.actor2.GetProperty().SetPointSize(5)
+            self.renderer.AddActor(self.actor2)
         else:
-            renderer.RemoveActor(actor1)
-            actor1 = self.create_point_cloud_actor(point_cloud1, [1, 0, 0])
-            actor1.GetProperty().SetPointSize(5)
-            renderer.AddActor(actor1)
+            self.renderer.RemoveActor(self.actor1)
+            self.actor1 = self.create_point_cloud_actor(self.point_cloud1, [1, 0, 0])
+            self.actor1.GetProperty().SetPointSize(5)
+            self.renderer.AddActor(self.actor1)
         self.render_window.Render()
 
-    def select_neighbors_within_radius(self, point_id, radius):
-        global selected_points_blue, selected_points_red, point_cloud2, actor2, renderer, switch_state, point_cloud1, actor1
+    # Select neighbors within a radius of a point
 
-        if switch_state == 0:
-            point_coords = point_cloud2[point_id]
-            vtk_points = actor2.GetMapper().GetInput().GetPoints()
+    def select_neighbors_within_radius(self, point_id, radius):
+        if self.switch_state == 0:
+            point_coords = self.point_cloud2[point_id]
+            vtk_points = self.actor2.GetMapper().GetInput().GetPoints()
         else:
-            point_coords = point_cloud1[point_id]
-            vtk_points = actor1.GetMapper().GetInput().GetPoints()
+            point_coords = self.point_cloud1[point_id]
+            vtk_points = self.actor1.GetMapper().GetInput().GetPoints()
 
         for i in range(vtk_points.GetNumberOfPoints()):
             if i == point_id:
@@ -170,235 +160,234 @@ class point_cloud_visual_editing:
             distance = np.linalg.norm(np.array(point_coords) - np.array(neighbor_coords))
 
             if distance <= radius:
-                if switch_state == 0:
-                    selected_points_blue.append(i)
+                if self.switch_state == 0:
+                    self.selected_points_blue.append(i)
                 else:
-                    selected_points_red.append(i)
+                    self.selected_points_red.append(i)
 
         self.highlight_selected_points()
         self.render_window.Render()
 
+    # Right button press callback function
 
     def point_pick_callback(self, obj, event):
-        global selected_points_blue, selected_points_red, point_picker, radius_slider, switch_state
-
         click_pos = self.render_window_interactor.GetEventPosition()
-        point_picker.Pick(click_pos[0], click_pos[1], 0, renderer)
-        selected_actor = point_picker.GetActor()
+        self.point_picker.Pick(click_pos[0], click_pos[1], 0, self.renderer)
+        selected_actor = self.point_picker.GetActor()
 
         if selected_actor:
-            selected_point_id = point_picker.GetPointId()
-            if switch_state == 0:
+            selected_point_id = self.point_picker.GetPointId()
+            if self.switch_state == 0:
                 if selected_point_id >= 0:
-                    if selected_point_id not in selected_points_blue:
-                        selected_points_blue.append(selected_point_id)
+                    if selected_point_id not in self.selected_points_blue:
+                        self.selected_points_blue.append(selected_point_id)
                     
-                    self.select_neighbors_within_radius(selected_point_id, radius_slider.GetValue())
-                    print(f"Selected points: {selected_points_blue}")
+                    self.select_neighbors_within_radius(selected_point_id, self.radius_slider.GetValue())
+                    print(f"Selected points: {self.selected_points_blue}")
             else:
                 if selected_point_id >= 0:
-                    if selected_point_id not in selected_points_red:
-                        selected_points_red.append(selected_point_id)
+                    if selected_point_id not in self.selected_points_red:
+                        self.selected_points_red.append(selected_point_id)
                     
-                    self.select_neighbors_within_radius(selected_point_id, radius_slider.GetValue())
-                    print(f"Selected points: {selected_points_red}")
+                    self.select_neighbors_within_radius(selected_point_id, self.radius_slider.GetValue())
+                    print(f"Selected points: {self.selected_points_red}")
 
-    # ----------------------------------------------------------------------- #
-    # Blue red switch button #
-    # ----------------------------------------------------------------------- #
+# ----------------------------------------------------------------------- #
+# Blue red switch button #
+# ----------------------------------------------------------------------- #
 
     def update_switch_state(self):
-        global switch_state, switch_text_actor
-        switch_state = (switch_state + 1) % 2
-        if switch_state == 0:
-            switch_text_actor.SetInput("Remove from: Blue")
+        self.switch_state = (self.switch_state + 1) % 2
+        if self.switch_state == 0:
+            #self.switch_text_actor.SetInput("Remove from: Blue")
+            pass
         else:
-            switch_text_actor.SetInput("Remove from: Red")
-        switch_text_actor.Modified()
-        print(f"Switched to: {'Blue' if switch_state == 0 else 'Red'}")
+            pass
+            #self.switch_text_actor.SetInput("Remove from: Red")
+        #self.switch_text_actor.Modified()
+        print(f"Switched to: {'Blue' if self.switch_state == 0 else 'Red'}")
 
     def switch_callback(self, obj, event):
         self.update_switch_state()
-
-    
-
-    # ----------------------------------------------------------------------- #
-    # Radius slider #
-    # ----------------------------------------------------------------------- #
+        # Callback function for the Clear Selection button
 
     def slider_callback(self, obj, event):
-        global radius_slider, radius_text_actor
-        radius = radius_slider.GetValue()
-        radius_text_actor.SetTextScaleModeToNone()
-        radius_text_actor.SetText(0, f"Radius: {radius}")
-        radius_text_actor.Modified()
-
-    
-
-    # ----------------------------------------------------------------------- #
-    # Point removal button #
-    # ----------------------------------------------------------------------- #
+        radius = self.radius_slider.GetValue()
+        self.radius_text_actor.SetTextScaleModeToNone()
+        self.radius_text_actor.SetText(0, f"Radius: {radius}")
+        self.radius_text_actor.Modified()
 
     def remove_points_callback(self, obj, event):
         self.remove_selected_points()
         
-        print(f"Removed selected points. Remaining points: {len(point_cloud2) if switch_state == 0 else len(point_cloud1)}")
+        print(f"Removed selected points. Remaining points: {len(self.point_cloud2) if self.switch_state == 0 else len(self.point_cloud1)}")
 
     def remove_selected_points(self):
-        global selected_points_blue, selected_points_red, point_cloud2, point_cloud1
-
-        if switch_state == 0:
-            print(len(point_cloud2))
-            point_cloud2 = np.delete(point_cloud2, selected_points_blue, axis=0)
-            print(len(point_cloud2))
+        if self.switch_state == 0:
+            print(len(self.point_cloud2))
+            self.point_cloud2 = np.delete(self.point_cloud2, self.selected_points_blue, axis=0)
+            print(len(self.point_cloud2))
             self.update_actors()
         else:
-            point_cloud1 = np.delete(point_cloud1, selected_points_red, axis=0)
+            self.point_cloud1 = np.delete(self.point_cloud1, self.selected_points_red, axis=0)
             self.update_actors()
 
-        selected_points_blue = []
-        selected_points_red = []
+        self.selected_points_blue = []
+        self.selected_points_red = []
 
-    
-
-    # ----------------------------------------------------------------------- #
-    # Clear selection button #
-    # ----------------------------------------------------------------------- #
     def clear_selection_callback(self, obj, event):
-        global selected_points_blue, selected_points_red, actor1, actor2
-
-        selected_points_blue = []
-        selected_points_red = []
+        self.selected_points_blue = []
+        self.selected_points_red = []
         self.highlight_selected_points()
 
-    
-
-    # ----------------------------------------------------------------------- #
-    # Save point clouds button #
-    # ----------------------------------------------------------------------- #
     # Function to fuse two point clouds
-    def fuse_point_clouds(self, point_cloud1, point_cloud2):
+    def fuse_point_clouds(self):
         # Combine the two point clouds (assumes the point clouds have the same format)
-        fused_point_cloud = np.concatenate((point_cloud1, point_cloud2), axis=0)
+        fused_point_cloud = np.concatenate((self.point_cloud1, self.point_cloud2), axis=0)
         return fused_point_cloud
 
     # Function to save a point cloud to a text file
-    def save_point_cloud_to_file(self, point_cloud, file_path):
+    def save_point_cloud_to_file(point_cloud, file_path):
         np.savetxt(file_path, point_cloud, fmt='%f %f %f')
 
     # Callback function for the new button to save fused point clouds
-    def new_button_callback(self, obj, event):
-        global point_cloud1, point_cloud2
-
+    def save_button_callback(self, obj, event):
         # Fuse the two point clouds
-        fused_point_cloud = self.fuse_point_clouds(point_cloud1, point_cloud2)
+        fused_point_cloud = self.fuse_point_clouds()
 
         # Save the fused point cloud to a text file
-        self.save_point_cloud_to_file(fused_point_cloud, "workflow_processed_data_output/fused_point_cloud.txt")
+        #self.save_point_cloud_to_file(fused_point_cloud, "workflow_processed_data_output/fused_point_cloud.txt")
 
         print("Fused point clouds saved to 'fused_point_cloud.txt'.")
 
-    
+        self.render_window.Finalize()  # Finalize the render window
+        self.render_window.GetInteractor().TerminateApp() 
+
     def run_editor(self, file_path_1, file_path_2):
-        point_cloud1 = self.parse_point_cloud_CT_lumen(file_path_1)
-        point_cloud2 = self.parse_lumen_point_cloud(file_path_2)
-        render_window = vtk.vtkRenderWindow()
-        render_window.SetFullScreen(True)  # Set the window to be fullscreen
-        render_window_interactor = vtk.vtkRenderWindowInteractor()
-        actor1 = self.create_point_cloud_actor(point_cloud1, [1, 0, 0])
-        actor2 = self.create_point_cloud_actor(point_cloud2, [0, 0, 1])
-        actor1.GetProperty().SetPointSize(5)
-        actor2.GetProperty().SetPointSize(5)
+        self.point_cloud1 = self.parse_lumen_point_cloud(file_path_1)
+        self.point_cloud2 = self.parse_point_cloud_CT_lumen(file_path_2)
 
-        renderer = vtk.vtkRenderer()
-        renderer.AddActor(actor1)
-        renderer.AddActor(actor2)
-        renderer.SetBackground(1.0, 1.0, 1.0)
+        self.actor1 = self.create_point_cloud_actor(self.point_cloud1, [1, 0, 0])
+        self.actor2 = self.create_point_cloud_actor(self.point_cloud2, [0, 0, 1])
 
-        render_window.AddRenderer(renderer)
-        render_window.SetWindowName("VTK Point Cloud Selection")
+        self.actor1.GetProperty().SetPointSize(5)
+        self.actor2.GetProperty().SetPointSize(5)
 
-        point_picker = vtk.vtkPointPicker()
-        render_window_interactor.SetPicker(point_picker)
+        self.renderer = vtk.vtkRenderer()
+        style = vtk.vtkInteractorStyleTrackballCamera()
+        self.render_window = vtk.vtkRenderWindow()
+        self.render_window.SetFullScreen(True)
 
-        global selected_points_red
-        selected_points_red = []
-        global selected_points_blue
-        selected_points_blue = []
-        switch_button = vtk.vtkButtonWidget()
-        switch_button.SetInteractor(render_window_interactor)
-        global switch_text_actor
-        switch_text_actor = vtk.vtkTextActor()
-        switch_text_actor.GetTextProperty().SetFontSize(12)
-        switch_text_actor.GetTextProperty().SetBackgroundColor(0.0, 0.0, 0.0)
-        switch_text_actor.SetPosition(0.7, 0.18)
+        self.render_window_interactor = vtk.vtkRenderWindowInteractor()
+        self.render_window_interactor.SetInteractorStyle(style)
+       
+        self.render_window.AddRenderer(self.renderer)
+        self.render_window.SetWindowName("Point Cloud Editor")
 
-        global switch_state
-        switch_state = 0
+        self.render_window_interactor.SetRenderWindow(self.render_window)
+        style.AddObserver("RightButtonPressEvent", lambda obj, event: self.point_pick_callback(obj, event))
+        self.render_window_interactor.SetInteractorStyle(style)
+
+        self.renderer.AddActor(self.actor1)
+        self.renderer.AddActor(self.actor2)
+        self.renderer.SetBackground(1, 1, 1)
+
+        self.point_picker = vtk.vtkPointPicker()
+        self.render_window_interactor.SetPicker(self.point_picker)
+
+        self.render_window.Render()
+
+        # Create a switch button
+        # Position the new button in the low-left corner
+        bds_new = [0] * 6
+        sz_new = 50.0
+        bds_new[0] = 20  # Adjust the X-coordinate 
+        bds_new[1] = bds_new[0] + sz_new
+        bds_new[2] = 70  # Adjust the Y-coordinate 
+        bds_new[3] = bds_new[2] + sz_new
+        bds_new[4] = bds_new[5] = 0.0
+
+        # Create a VTK button representation for the new button
         switch_button_rep = vtk.vtkTexturedButtonRepresentation2D()
-        button_texture_off = vtk.vtkImageData()
-        button_texture_on = vtk.vtkImageData()
-
-        self.CreateButtonOff(button_texture_off)
-        self.CreateButtonOn(button_texture_on)
+        button_texture_off_new = vtk.vtkImageData()
+        button_texture_on_new = vtk.vtkImageData()
+        self.CreateButtonOff(button_texture_off_new)
+        self.CreateButtonOn(button_texture_on_new)
 
         switch_button_rep.SetNumberOfStates(2)
-        switch_button_rep.SetButtonTexture(0, button_texture_off)
-        switch_button_rep.SetButtonTexture(1, button_texture_on)
+        switch_button_rep.SetButtonTexture(0, button_texture_off_new)
+        switch_button_rep.SetButtonTexture(1, button_texture_on_new)
+        # Place the new button widget
 
-        switch_button.SetRepresentation(switch_button_rep)
-        switch_button.SetInteractor(render_window_interactor)
-        switch_button.SetRepresentation(switch_button_rep)
-        switch_button.AddObserver("StateChangedEvent", self.switch_callback)
-        switch_button.On()
+        switch_button_text_actor = vtk.vtkTextActor()
+        switch_button_text_actor.GetTextProperty().SetFontSize(20)
+        switch_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
+        switch_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
+        switch_button_text_actor.SetPosition(bds_new[0], bds_new[3])
+        button_label = "Switch Button"  # Replace with your desired button label
+        switch_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
+        switch_button_text_actor.SetInput(button_label) 
+        self.renderer.AddActor2D(switch_button_text_actor)
 
-        self.update_switch_state()
-        radius_slider = vtk.vtkSliderRepresentation2D()
-        radius_slider.SetMinimumValue(0)
-        radius_slider.SetMaximumValue(10)
-        radius_slider.SetValue(5)
-        radius_slider.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
-        radius_slider.GetPoint1Coordinate().SetValue(0.1, 0.1)
-        radius_slider.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
-        radius_slider.GetPoint2Coordinate().SetValue(0.4, 0.1)
-        radius_slider.SetSliderLength(0.02)
-        radius_slider.SetSliderWidth(0.03)
-        radius_slider.SetEndCapLength(0.01)
-        radius_slider.SetEndCapWidth(0.03)
-        radius_slider.SetTubeWidth(0.01)
-        radius_slider.SetLabelFormat("%0.1f")
-        radius_slider.SetTitleText("Radius")
+        switch_button_rep.SetPlaceFactor(1)
+        switch_button_rep.PlaceWidget(bds_new)
+
+        switch_button_widget = vtk.vtkButtonWidget()
+        switch_button_widget.SetInteractor(self.render_window_interactor)
+        switch_button_widget.SetRepresentation(switch_button_rep)
+
+        # Connect the callback function to the new button
+        switch_button_widget.AddObserver("StateChangedEvent", self.switch_callback)
+        switch_button_widget.On()
+
+        # Radius slider
+
+        self.radius_slider = vtk.vtkSliderRepresentation2D()
+        self.radius_slider.SetMinimumValue(0)
+        self.radius_slider.SetMaximumValue(10)
+        self.radius_slider.SetValue(5)
+        self.radius_slider.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
+        self.radius_slider.GetPoint1Coordinate().SetValue(0.1, 0.1)
+        self.radius_slider.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
+        self.radius_slider.GetPoint2Coordinate().SetValue(0.4, 0.1)
+        self.radius_slider.SetSliderLength(0.02)
+        self.radius_slider.SetSliderWidth(0.03)
+        self.radius_slider.SetEndCapLength(0.01)
+        self.radius_slider.SetEndCapWidth(0.03)
+        self.radius_slider.SetTubeWidth(0.01)
+        self.radius_slider.SetLabelFormat("%0.1f")
+        self.radius_slider.SetTitleText("Radius")
 
         slider_widget = vtk.vtkSliderWidget()
-        slider_widget.SetInteractor(render_window_interactor)
-        slider_widget.SetRepresentation(radius_slider)
+        slider_widget.SetInteractor(self.render_window_interactor)
+        slider_widget.SetRepresentation(self.radius_slider)
         slider_widget.KeyPressActivationOff()
         slider_widget.On()
 
-        radius_text_actor = vtk.vtkTextActor()
-        radius_text_actor.GetTextProperty().SetFontSize(12)
-        radius_text_actor.GetTextProperty().SetColor(1.0, 1.0, 1.0)
-        radius_text_actor.GetTextProperty().SetBackgroundColor(0.0, 0.0, 0.0)
-        radius_text_actor.SetPosition(0.1, 0.18)
+        self.radius_text_actor = vtk.vtkTextActor()
+        self.radius_text_actor.GetTextProperty().SetFontSize(12)
+        self.radius_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
+        self.radius_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
+        self.radius_text_actor.SetPosition(0.1, 0.18)
 
-        renderer.AddActor2D(radius_text_actor)
+        self.renderer.AddActor2D(self.radius_text_actor)
+
+        # Point removal button #
+
         remove_button = vtk.vtkTexturedButtonRepresentation2D()
-        remove_button.SetNumberOfStates(2)
+        remove_button.SetNumberOfStates(1)
         button_texture_1 = vtk.vtkImageData()
-        button_texture_2 = vtk.vtkImageData()
 
         self.CreateButtonOff(button_texture_1)
-        self.CreateButtonOn(button_texture_2)
 
         remove_button.SetButtonTexture(0, button_texture_1)
-        remove_button.SetButtonTexture(1, button_texture_2)
 
         remove_button_widget = vtk.vtkButtonWidget()
-        remove_button_widget.SetInteractor(render_window_interactor)
+        remove_button_widget.SetInteractor(self.render_window_interactor)
         remove_button_widget.SetRepresentation(remove_button)
         remove_button_widget.AddObserver("StateChangedEvent", self.remove_points_callback)
 
-        render_window.Render()
+        self.render_window.Render()
 
 
         upperRight = vtk.vtkCoordinate()
@@ -407,34 +396,36 @@ class point_cloud_visual_editing:
 
         bds = [0] * 6
         sz = 50.0
-        bds[0] = upperRight.GetComputedDisplayValue(renderer)[0] - sz
+        bds[0] = upperRight.GetComputedDisplayValue(self.renderer)[0] - sz
         bds[1] = bds[0] + sz
-        bds[2] = upperRight.GetComputedDisplayValue(renderer)[1] - sz
+        bds[2] = upperRight.GetComputedDisplayValue(self.renderer)[1] - sz
         bds[3] = bds[2] + sz
         bds[4] = bds[5] = 0.0
 
         remove_button_text_actor = vtk.vtkTextActor()
-        remove_button_text_actor.GetTextProperty().SetFontSize(12)
-        remove_button_text_actor.GetTextProperty().SetColor(1.0, 1.0, 1.0)
-        remove_button_text_actor.GetTextProperty().SetBackgroundColor(0.0, 0.0, 0.0)
-        remove_button_text_actor.SetPosition(3, 3)
-
-        renderer.AddActor2D(radius_text_actor)
-        renderer.AddActor2D(remove_button_text_actor)
+        remove_button_text_actor.GetTextProperty().SetFontSize(20)
+        remove_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
+        remove_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
+        remove_button_text_actor.SetPosition(bds[0]-140, bds[3]-80)
+        button_label = "Remove Button"  # Replace with your desired button label
+        remove_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
+        remove_button_text_actor.SetInput(button_label) 
+        self.renderer.AddActor2D(remove_button_text_actor)
 
         remove_button.SetPlaceFactor(1)
         remove_button.PlaceWidget(bds)
         remove_button_widget.On()
+
+        
+        # Clear selection button
+
         # Create a VTK button widget for clearing the selection
         clear_button_rep = vtk.vtkTexturedButtonRepresentation2D()
         button_texture_off_clear = vtk.vtkImageData()
-        button_texture_on_clear = vtk.vtkImageData()
         self.CreateButtonOff(button_texture_off_clear)
-        self.CreateButtonOn(button_texture_on_clear)
 
-        clear_button_rep.SetNumberOfStates(2)
+        clear_button_rep.SetNumberOfStates(1)
         clear_button_rep.SetButtonTexture(0, button_texture_off_clear)
-        clear_button_rep.SetButtonTexture(1, button_texture_on_clear)
 
         # Position the clear button in the bottom-right corner
         buttomRight = vtk.vtkCoordinate()
@@ -443,52 +434,83 @@ class point_cloud_visual_editing:
 
         bds_clear = [0] * 6
         sz = 50.0
-        bds_clear[0] = buttomRight.GetComputedDisplayValue(renderer)[0] + sz
+        bds_clear[0] = buttomRight.GetComputedDisplayValue(self.renderer)[0] + sz
         bds_clear[1] = bds_clear[0] + sz
-        bds_clear[2] = buttomRight.GetComputedDisplayValue(renderer)[1] - sz
+        bds_clear[2] = buttomRight.GetComputedDisplayValue(self.renderer)[1] - sz
         bds_clear[3] = bds_clear[2] + sz
         bds_clear[4] = bds_clear[5] = 0.0
 
 
         # Create the clear button widget
         clear_button_widget = vtk.vtkButtonWidget()
-        clear_button_widget.SetInteractor(render_window_interactor)
+        clear_button_widget.SetInteractor(self.render_window_interactor)
         clear_button_widget.SetRepresentation(clear_button_rep)
+
+        clear_button_text_actor = vtk.vtkTextActor()
+        clear_button_text_actor.GetTextProperty().SetFontSize(20)
+        clear_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
+        clear_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
+        clear_button_text_actor.SetPosition(bds_clear[0]-250, bds_clear[3]+50)
+        button_label = "Clear Selection Button"  # Replace with your desired button label
+        clear_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
+        clear_button_text_actor.SetInput(button_label) 
+        self.renderer.AddActor2D(clear_button_text_actor)
 
         # Connect the callback function to the clear button
         clear_button_widget.AddObserver("StateChangedEvent", self.clear_selection_callback)
         clear_button_rep.SetPlaceFactor(1)
         clear_button_rep.PlaceWidget(bds_clear)
         clear_button_widget.On()
+
+        # ----------------------------------------------------------------------- #
+        # Save point clouds button #
+        # ----------------------------------------------------------------------- #
+
         # Position the new button in the top-left corner
         bds_new = [0] * 6
         sz_new = 50.0
         bds_new[0] = 20  # Adjust the X-coordinate for the top-left corner
         bds_new[1] = bds_new[0] + sz_new
-        bds_new[2] = render_window.GetSize()[1] - 70  # Adjust the Y-coordinate for the top-left corner
+        bds_new[2] = self.render_window.GetSize()[1] - 70  # Adjust the Y-coordinate for the top-left corner
         bds_new[3] = bds_new[2] + sz_new
         bds_new[4] = bds_new[5] = 0.0
 
         # Create a VTK button representation for the new button
         new_button_rep = vtk.vtkTexturedButtonRepresentation2D()
         button_texture_off_new = vtk.vtkImageData()
-        button_texture_on_new = vtk.vtkImageData()
         self.CreateButtonOff(button_texture_off_new)
-        self.CreateButtonOn(button_texture_on_new)
 
-        new_button_rep.SetNumberOfStates(2)
+        new_button_rep.SetNumberOfStates(1)
         new_button_rep.SetButtonTexture(0, button_texture_off_new)
-        new_button_rep.SetButtonTexture(1, button_texture_on_new)
         # Place the new button widget
         new_button_rep.SetPlaceFactor(1)
         new_button_rep.PlaceWidget(bds_new)
 
+        save_button_text_actor = vtk.vtkTextActor()
+        save_button_text_actor.GetTextProperty().SetFontSize(20)
+        save_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
+        save_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
+        save_button_text_actor.SetPosition(bds_new[0], bds_new[3]-70)
+        button_label = "Save Button"  # Replace with your desired button label
+        save_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
+        save_button_text_actor.SetInput(button_label) 
+        self.renderer.AddActor2D(save_button_text_actor)
+
+
         new_button_widget = vtk.vtkButtonWidget()
-        new_button_widget.SetInteractor(render_window_interactor)
+        new_button_widget.SetInteractor(self.render_window_interactor)
         new_button_widget.SetRepresentation(new_button_rep)
         # Connect the callback function to the new button
-        new_button_widget.AddObserver("StateChangedEvent", self.new_button_callback)
+        new_button_widget.AddObserver("StateChangedEvent", self.save_button_callback)
         new_button_widget.On()
 
-        render_window_interactor.Start()
 
+        # Create and set the render window for the interactor
+        self.render_window.Render()
+
+        # Initialize the interactor
+        self.render_window_interactor.Initialize()
+
+        # Start the interaction
+        self.render_window.Render()
+        self.render_window_interactor.Start()

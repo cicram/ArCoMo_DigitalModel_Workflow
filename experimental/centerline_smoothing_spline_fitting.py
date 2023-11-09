@@ -107,10 +107,10 @@ def parse_marked_point(file_path):
 
 if __name__ == "__main__":
     current_point_index = 0
-    file_path_1 = "centerline.txt" 
+    file_path_1 = "workflow_data/centerline.txt" 
     display_results = False
     pc_centerline = parse_point_cloud_centerline(file_path_1, display_results)
-    if False:
+    if True:
         colors = ['blue'] + ['red'] * (len(pc_centerline) - 1)
         visualize_point_cloud_artery(pc_centerline, colors)
 
