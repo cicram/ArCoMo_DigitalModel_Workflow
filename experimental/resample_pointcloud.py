@@ -140,36 +140,42 @@ def poisson_disk_sampling_3d(points, radius, num_samples=1000):
 
 
 if __name__ == "__main__":
-    if False:
-        file_path = "G:/NEW/Anonymous Male_Centerline 2_copy_copy_002.txt"
-        file_path_2 = "G:/ArCoMo6_lumen_pp.txt"
+    if True:
+        file_path = "phantom_data/noisy_downsampled_point_cloud_with_branch.txt"
+        if True:
+            points = parse_point_cloud(file_path)
+            #point_cloud = parse_lumen_point_cloud(file_path, file_path_2)
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(points)
 
-        #point_cloud = parse_lumen_point_cloud(file_path, file_path_2)
-
-            # Load the .PLY file
-        mesh = o3d.io.read_triangle_mesh("G:/NEW/Anonymous Male_Centerline 2_copy_copy_001.ply")
-        orig_point_cloud = o3d.io.read_point_cloud("G:/NEW/Anonymous Male_Centerline 2_copy_copy_001.ply")
+            # Save PointCloud to PLY file
+            o3d.io.write_point_cloud('newformat.ply', pcd)
+                # Load the .PLY file
+        mesh = o3d.io.read_triangle_mesh('newformat.ply')
+        orig_point_cloud = o3d.io.read_point_cloud('newformat.ply')
 
         # Decimate the mesh (optional)
-        mesh = mesh.simplify_quadric_decimation(target_number_of_triangles=10000)
+        #mesh = mesh.simplify_quadric_decimation(target_number_of_triangles=1000)
 
         # Create a regular point cloud from the mesh with a smaller voxel size
         voxel_size = 0.02  # Adjust this value to control point density (smaller values = denser point cloud)
         pcd = mesh.sample_points_uniformly(number_of_points=int(mesh.get_surface_area() / voxel_size))
 
-        o3d.io.write_point_cloud("regular_point_cloud.ply", pcd)
-        point_cloud = o3d.io.read_point_cloud("regular_point_cloud.ply")
+        o3d.io.write_point_cloud("phantom_data/upsampled_noisy_with_branch.ply", pcd)
+        point_cloud = o3d.io.read_point_cloud("phantom_data/upsampled_noisy_with_branch.ply")
 
-        # Extract the points as a numpy array
-        points = point_cloud.points
+        if False:
 
-        # Define the output file name
-        output_file = "ct_point_cloud_dense.txt"
+            # Extract the points as a numpy array
+            points = point_cloud.points
 
-        # Write the points to the text file
-        with open(output_file, "w") as file:
-            for point in points:
-                file.write(f"{point[0]:.2f} {point[1]:.2f} {point[2]:.2f}\n")
+            # Define the output file name
+            output_file = "ct_point_cloud_dense.txt"
+
+            # Write the points to the text file
+            with open(output_file, "w") as file:
+                for point in points:
+                    file.write(f"{point[0]:.2f} {point[1]:.2f} {point[2]:.2f}\n")
 
         # Create visualizations for the original mesh and the regular point cloud
         o3d.visualization.draw_geometries([orig_point_cloud], window_name="Original Point cloud")
@@ -282,7 +288,7 @@ if __name__ == "__main__":
         pcd = pcd.orient_normals_consistent_tangent_plane(k_tangent=15, k_normal=25)
         pcd = pcd.select_by_index(pcd, np.isfinite(pcd.points).all(axis=1))
 
-    if True:
+    if False:
         file_path = "workflow_processed_data_output/fused_point_cloud.xyz"
 
         # Load your point cloud (replace with your file path)

@@ -5,7 +5,7 @@ from stl import mesh
 import open3d as o3d
 
 # Load the STL file
-stl_mesh = o3d.io.read_triangle_mesh("phantom_data/GT_stenose_self_centerline.stl")
+stl_mesh = o3d.io.read_triangle_mesh("phantom_data/GT_stenose_self_centerline_with_side_branch.stl")
 
 # Convert the mesh to a point cloud
 point_cloud = stl_mesh.sample_points_poisson_disk(number_of_points=10000)
@@ -32,17 +32,17 @@ noisy_downsampled_point_cloud.paint_uniform_color(blue_color)
 point_cloud.paint_uniform_color(green_color)
 
 # Save the downsampled point cloud to a PLY file
-o3d.io.write_point_cloud("phantom_data/noisy_downsampled_point_cloud.ply", noisy_downsampled_point_cloud)
+o3d.io.write_point_cloud("phantom_data/noisy_downsampled_point_cloud_with_branch.ply", noisy_downsampled_point_cloud)
 
 # Visualize the original and downsampled point clouds
 o3d.visualization.draw_geometries([point_cloud], window_name="Original Point Cloud")
 o3d.visualization.draw_geometries([downsampled_point_cloud, noisy_downsampled_point_cloud], window_name="Downsampled vs. Noisy Downsampled Point Clouds")
 
 # Load the noisy point cloud
-noisy_downsampled_point_cloud = o3d.io.read_point_cloud("phantom_data/noisy_downsampled_point_cloud.ply")
+noisy_downsampled_point_cloud = o3d.io.read_point_cloud("phantom_data/noisy_downsampled_point_cloud_with_branch.ply")
 
 # Define the output file path
-output_file = "phantom_data/noisy_downsampled_point_cloud.txt"
+output_file = "phantom_data/noisy_downsampled_point_cloud_with_branch.txt"
 
 # Extract the points as a numpy array
 points = noisy_downsampled_point_cloud.points

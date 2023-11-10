@@ -123,6 +123,8 @@ if __name__ == "__main__":
 
     # Visual point cloud editing:
     point_cloud_visual_editior = point_cloud_visual_editing()
-    file_path_1 = "phantom_data/noisy_downsampled_point_cloud.txt"
+    file_path_1 = "phantom_data/noisy_downsampled_point_cloud_with_branch.txt"
     file_path_2 = "workflow_processed_data_output/saved_registered_splines.txt"
     point_cloud_visual_editior.run_editor(file_path_1, file_path_2)
+    point_cloud_save = point_cloud_visual_editior.fused_point_cloud
+    

@@ -17,7 +17,7 @@ class point_cloud_visual_editing:
         self.switch_text_actor = None
         self.radius_slider = None
         self.radius_text_actor = None
-
+        self.fused_point_cloud = None
     # Data parsing functions
 
     def parse_lumen_point_cloud(self, file_path):
@@ -52,10 +52,15 @@ class point_cloud_visual_editing:
         white = [155, 155, 155]
         self.CreateImage(image, white, white)
 
-    def CreateButtonOn(self, image):
+    def CreateButtonBlue(self, image):
         white = [155, 155, 155]
-        blue = [20, 30, 155]
+        blue = [0, 0, 255]
         self.CreateImage(image, white, blue)
+
+    def CreateButtonRed(self, image):
+        white = [155, 155, 155]
+        red = [255, 0, 0]
+        self.CreateImage(image, white, red)
 
     def CreateImage(self, image, color1, color2):
         size = 12
@@ -214,7 +219,7 @@ class point_cloud_visual_editing:
     def slider_callback(self, obj, event):
         radius = self.radius_slider.GetValue()
         self.radius_text_actor.SetTextScaleModeToNone()
-        self.radius_text_actor.SetText(0, f"Radius: {radius}")
+        self.radius_text_actor.SetText(0, f"Selection radius: {radius}")
         self.radius_text_actor.Modified()
 
     def remove_points_callback(self, obj, event):
@@ -243,20 +248,19 @@ class point_cloud_visual_editing:
     # Function to fuse two point clouds
     def fuse_point_clouds(self):
         # Combine the two point clouds (assumes the point clouds have the same format)
-        fused_point_cloud = np.concatenate((self.point_cloud1, self.point_cloud2), axis=0)
-        return fused_point_cloud
+        self.fused_point_cloud = np.concatenate((self.point_cloud1, self.point_cloud2), axis=0)
 
     # Function to save a point cloud to a text file
-    def save_point_cloud_to_file(point_cloud, file_path):
-        np.savetxt(file_path, point_cloud, fmt='%f %f %f')
+    def save_point_cloud_to_file(self, file_path):
+        np.savetxt(file_path, self.fused_point_cloud, fmt='%f %f %f')
 
     # Callback function for the new button to save fused point clouds
     def save_button_callback(self, obj, event):
         # Fuse the two point clouds
-        fused_point_cloud = self.fuse_point_clouds()
+        self.fuse_point_clouds()
 
         # Save the fused point cloud to a text file
-        #self.save_point_cloud_to_file(fused_point_cloud, "workflow_processed_data_output/fused_point_cloud.txt")
+        self.save_point_cloud_to_file("workflow_processed_data_output/fused_point_cloud_with_branch.xyz")
 
         print("Fused point clouds saved to 'fused_point_cloud.txt'.")
 
@@ -309,14 +313,14 @@ class point_cloud_visual_editing:
 
         # Create a VTK button representation for the new button
         switch_button_rep = vtk.vtkTexturedButtonRepresentation2D()
-        button_texture_off_new = vtk.vtkImageData()
-        button_texture_on_new = vtk.vtkImageData()
-        self.CreateButtonOff(button_texture_off_new)
-        self.CreateButtonOn(button_texture_on_new)
+        button_texture_blue = vtk.vtkImageData()
+        button_texture_red = vtk.vtkImageData()
+        self.CreateButtonBlue(button_texture_blue)
+        self.CreateButtonRed(button_texture_red)
 
         switch_button_rep.SetNumberOfStates(2)
-        switch_button_rep.SetButtonTexture(0, button_texture_off_new)
-        switch_button_rep.SetButtonTexture(1, button_texture_on_new)
+        switch_button_rep.SetButtonTexture(0, button_texture_blue)
+        switch_button_rep.SetButtonTexture(1, button_texture_red)
         # Place the new button widget
 
         switch_button_text_actor = vtk.vtkTextActor()
@@ -356,21 +360,20 @@ class point_cloud_visual_editing:
         self.radius_slider.SetEndCapWidth(0.03)
         self.radius_slider.SetTubeWidth(0.01)
         self.radius_slider.SetLabelFormat("%0.1f")
-        self.radius_slider.SetTitleText("Radius")
-
+        self.radius_slider.SetTitleText("Selection radius")
+        self.radius_slider.GetSliderProperty().SetColor(0.0, 1.0, 0.0)
+        self.radius_slider.GetTitleProperty().SetColor(0, 0, 0)
+        self.radius_slider.GetTitleProperty().SetColor(0, 0, 0)
+        self.radius_slider.GetSelectedProperty().SetColor(0, 0, 0)
+        self.radius_slider.GetTubeProperty().SetColor(0, 0, 0)
+        self.radius_slider.GetSelectedProperty().SetColor(0, 0, 0)
+        self.radius_slider.GetCapProperty().SetColor(0, 0, 0)
+        
         slider_widget = vtk.vtkSliderWidget()
         slider_widget.SetInteractor(self.render_window_interactor)
         slider_widget.SetRepresentation(self.radius_slider)
         slider_widget.KeyPressActivationOff()
         slider_widget.On()
-
-        self.radius_text_actor = vtk.vtkTextActor()
-        self.radius_text_actor.GetTextProperty().SetFontSize(12)
-        self.radius_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
-        self.radius_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
-        self.radius_text_actor.SetPosition(0.1, 0.18)
-
-        self.renderer.AddActor2D(self.radius_text_actor)
 
         # Point removal button #
 
