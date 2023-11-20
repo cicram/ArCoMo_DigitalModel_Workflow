@@ -17,8 +17,8 @@ class oct_lumen_extraction:
         lower_color1 = np.array([color1[2], color1[1], color1[0]], dtype=np.uint8)
         upper_color1 = np.array([color1[2], color1[1], color1[0]], dtype=np.uint8)
         # Little offset given to ensure color of line-dots are included
-        lower_color2 = np.array([color2[2] - 10, color2[1] - 10, color2[0] - 10], dtype=np.uint8)
-        upper_color2 = np.array([color2[2] + 10, color2[1] + 10, color2[0] + 10], dtype=np.uint8)
+        lower_color2 = np.array([color2[2] - 1, color2[1] - 1, color2[0] - 1], dtype=np.uint8)
+        upper_color2 = np.array([color2[2] + 1, color2[1] + 1, color2[0] + 1], dtype=np.uint8)
 
         mask1 = cv2.inRange(input_image, lower_color1, upper_color1)
         mask2 = cv2.inRange(input_image, lower_color2, upper_color2)
@@ -124,7 +124,7 @@ class oct_lumen_extraction:
 
 
     def icp_alignment(self, first_contour, points, reference_points, transformation_matrix_previous, display_images, registration_point, max_iterations=100, distance_threshold=100, convergence_translation_threshold=1e-3,
-            convergence_rotation_threshold=1e-4, point_pairs_threshold=10, verbose=True):
+            convergence_rotation_threshold=1e-4, point_pairs_threshold=10, verbose=False):
         """
         An implementation of the Iterative Closest Point algorithm that matches a set of M 2D points to another set
         of N 2D (reference) points.
@@ -284,6 +284,31 @@ class oct_lumen_extraction:
         return points, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point
 
 
+    def find_registration_frame(self, letter_x_mask_path, input_file, crop, color1, color2, display_images):
+        
+        letter_mask = cv2.imread(letter_x_mask_path, cv2.IMREAD_GRAYSCALE)
+
+        # Find registration frame
+        with Image.open(input_file) as im:
+            for page in range(im.n_frames):
+                im.seek(page)  # Move to the current page (frame)
+                image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
+
+                open_cv_image = image[crop:, :, ::-1].copy()  # Crop image at xxx pixels from top
+
+                # Apply the color filter
+                binary_mask = self.filter_color(open_cv_image, color1, color2)
+                if display_images and False:
+                    self.plt_cv2_images('Color filtered image', binary_mask)
+                result = cv2.matchTemplate(binary_mask, letter_mask, cv2.TM_CCOEFF_NORMED)
+                min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+                if max_val > 0.9:
+                    print(page)
+                    return page
+                    
+        return None
+
+
     def letter_A_removal(self, binary_mask, letter_mask_path):
         # Load the binary mask and the letter 'A' mask
         letter_mask = cv2.imread(letter_mask_path, cv2.IMREAD_GRAYSCALE)
@@ -414,7 +439,7 @@ class oct_lumen_extraction:
             cv2.destroyAllWindows()  # Close the image window
 
 
-    def process_tif_file(self, crop, input_file, z_offset, conversion_factor, save_file, color1, color2, smoothing_kernel_size,
+    def process_tif_file(self, crop, input_file, OCT_end_frame, OCT_start_frame, z_offset, conversion_factor, save_file, color1, color2, smoothing_kernel_size,
                         threshold_value, display_images, registration_point, carina_point_frame, save_images_for_controll):
         first_contour_flag = True
         z_coordinate = 0
@@ -422,7 +447,8 @@ class oct_lumen_extraction:
         point_cloud = []
         transformation_matrix_previous = None
         with Image.open(input_file) as im:
-            for page in range(im.n_frames):
+            for page in range(OCT_start_frame, OCT_end_frame, 1):
+                print(page)
                 im.seek(page)  # Move to the current page (frame)
                 image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
 
@@ -445,7 +471,8 @@ class oct_lumen_extraction:
 
                 # fit a spline to the contour
                 current_contour = self.spline_fitting(threshold_mask, display_images, save_images_for_controll, page)
-
+                if page == 89:
+                    current_contour = None
                 if current_contour is not None:
 
                     # save unaligned pointcloud
@@ -475,8 +502,7 @@ class oct_lumen_extraction:
                         aligned_source_points = np.array(aligned_source_spline)
                         transformation_matrix_previous = transformation_matrix
                         # Apply transformation also to registration point
-                        if page == (carina_point_frame + 8):
-                            print("Remove me (+8)")
+                        if page == (carina_point_frame):
                             if False: # old way
                                 registration_point_2d = registration_point[0:2]
                                 registration_point_transformed = np.dot(registration_point_2d, transformation_matrix)
@@ -498,7 +524,6 @@ class oct_lumen_extraction:
                             if save_file:
                                 # Write the coordinates to the text file
                                 with open("workflow_processed_data_output/aligned_OCT_registration_point.txt", 'w') as file:
-                                    registration_point[2] = registration_point[2] - 0.8
                                     file.write(f"{updated_registration_point[0] * conversion_factor:.2f} {updated_registration_point[1] * conversion_factor:.2f} {registration_point[2]:.2f}\n")
 
                         if display_images:
@@ -532,7 +557,7 @@ class oct_lumen_extraction:
                     point_cloud_current = [(xi * conversion_factor, yi * conversion_factor, z_coordinate) for xi, yi in
                                         aligned_source_points_shifted]
                     
-                    if page == (carina_point_frame + 8):
+                    if page == (carina_point_frame):
                         current_contour = np.array(current_contour)
                         plt.plot(updated_registration_point[0], updated_registration_point[1], "x")
                         plt.plot(registration_point[0]- centroid[0] , registration_point[1]- centroid[1], "o")

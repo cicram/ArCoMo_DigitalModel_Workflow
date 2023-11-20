@@ -4,7 +4,7 @@ from scipy.spatial.transform import Rotation
 from scipy.interpolate import splprep, splev
 
 class center_line_registration: 
-    def parse_registration_point(self, file_path, display_results):
+    def parse_registration_point_OCT(self, file_path):
         data = []
         # Open the text file for reading
         with open(file_path, 'r') as file:
@@ -17,22 +17,26 @@ class center_line_registration:
                     # Parse the values as floats and append them to the respective lists
                     px, py, pz = float(parts[0]), float(parts[1]), float(parts[2])
                     data.append((px, py, pz))
+        return np.array(data[0])
+
+    
+    def parse_registration_point_CT(self, file_path):
+        data = []
+        # Open the text file for reading
+        with open(file_path, 'r') as file:
+            for line in file:
+                # Split the line into three values
+                parts = line.strip().split()
+
+                # Ensure there are three values on each line
+                if len(parts) == 5:
+                    if parts[0]=="Point":
+                    # Parse the values as floats and append them to the respective lists
+                        px, py, pz = float(parts[2]), float(parts[3]), float(parts[4])
+                        data.append((px, py, pz))
 
         data = np.array(data)
         center_point = np.mean(data, axis=0)
-
-        if display_results:
-            x_filtered = data[:, 0]
-            y_filtered = data[:, 1]
-            z_filtered = data[:, 2]
-
-            fig = plt.figure(figsize=(10, 8))
-            ax = fig.add_subplot(111, projection='3d')
-            ax.scatter(center_point[0], center_point[1], center_point[2], c="red", marker='o')
-            ax.set_xlabel('Px')
-            ax.set_ylabel('Py')
-            ax.set_zlabel('Pz')
-            plt.show()
 
         return center_point
 
@@ -283,7 +287,7 @@ class center_line_registration:
         for z_level, frame_points in grouped_OCT_frames.items():
             if z_level > z_level_registration:
                 count += 1
-        closest_centerline_point_idx = centerline_registration_start - count - 8 
+        closest_centerline_point_idx = centerline_registration_start - count
 
         # Iterate through the splines and align them on the centerline points.
         for z_level, frame_points in grouped_OCT_frames.items():
@@ -298,8 +302,7 @@ class center_line_registration:
             normal_vector = centerline_vectors[closest_centerline_point_idx]
 
             # Calculate the transformation matrix to align the spline with the centerline point's vector.
-            source_normal_vector = np.array([0, 0, 1])
-            print("Change me (minus normal z vector)")
+            source_normal_vector = np.array([0, 0, -1])
 
             rotation_matrix = self.rotation_matrix_from_vectors(source_normal_vector, normal_vector)
 
@@ -319,13 +322,8 @@ class center_line_registration:
             if z_level == z_level_registration:
             # Write the coordinates to the text file
                 rotated_registration_point_OCT = np.dot(rotation_matrix, rotated_registration_point_OCT.T).T  # Apply rotation
-
-                rotated_registration_point_OCT[2] = 10
                 if save_file:
-
                     with open("workflow_processed_data_output/rotated_OCT_registration_point.txt", 'w') as file:
-                        rotated_registration_point_OCT[2] = rotated_registration_point_OCT[2] - 0.8
-                        print("Remove me -0.8")
                         file.write(f"{rotated_registration_point_OCT[0]:.2f} {rotated_registration_point_OCT[1]:.2f} {rotated_registration_point_OCT[2]:.2f}\n")
 
 
@@ -394,8 +392,7 @@ class center_line_registration:
     def get_oct_lumen_rotation_matrix(self, resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_CT, OCT_registration_frame, z_distance, display_results):
         target_centerline_point = resampled_pc_centerline[centerline_registration_start]
         # find correct frame
-        print("Remove me (+0.8)")
-        registration_frame = grouped_OCT_frames[round(grouped_OCT_frames[0][0][2] - (OCT_registration_frame * z_distance + 0.8), 1)]
+        registration_frame = grouped_OCT_frames[round(grouped_OCT_frames[0][0][2] - (OCT_registration_frame * z_distance), 1)]
         registered_frame = np.array(registration_frame)  # Copy the frame points
 
         # Perform the translation to center the spline and registration point on the centerline point.

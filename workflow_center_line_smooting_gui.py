@@ -39,14 +39,16 @@ class PointCloudSmoothingVisualizer:
             lines = file.readlines()
             for line in lines:
                 parts = line.split()
-                if len(parts) == 21:  # Ensure the line has at least 3 values
-                    if not flag_header:
-                        flag_header = True
-                    else:
+                if len(parts) >= 3:
+                    if parts[0]=="[Main" and flag_header:
+                        flag_header = False
+                    if flag_header:
                         px, py, pz = float(parts[0]), float(parts[1]), float(parts[2])
                         data.append((px, py, pz))
-                else:
-                    flag_header = False
+                    if parts[0]=="Px" and parts[1]=="Py" and parts[2]=="Pz":
+                        flag_header = True
+                    
+
         data = np.array(data)
         return data
 

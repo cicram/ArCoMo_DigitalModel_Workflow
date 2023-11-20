@@ -140,7 +140,7 @@ def poisson_disk_sampling_3d(points, radius, num_samples=1000):
 
 
 if __name__ == "__main__":
-    if True:
+    if False:
         file_path = "phantom_data/noisy_downsampled_point_cloud_with_branch.txt"
         if True:
             points = parse_point_cloud(file_path)
@@ -185,9 +185,9 @@ if __name__ == "__main__":
 
     #----------------------------------------------------------------------------------------------#
     #----------------------------------------------------------------------------------------------#
-    if False:
+    if True:
         # Load the .PLY file
-        mesh = o3d.io.read_triangle_mesh("workflow_processed_3d_models/mesh_low_density.ply")
+        mesh = o3d.io.read_triangle_mesh("workflow_data/CT_ply.ply")
 
         # Decimate the mesh (optional)
         mesh = mesh.simplify_quadric_decimation(target_number_of_triangles=100000)
@@ -196,14 +196,14 @@ if __name__ == "__main__":
         voxel_size = 0.05  # Adjust this value to control point density (smaller values = denser point cloud)
         pcd = mesh.sample_points_uniformly(number_of_points=int(mesh.get_surface_area() / voxel_size))
 
-        o3d.io.write_point_cloud("workflow_processed_3d_models/regular_point_cloud_low_density.ply", pcd)
-        point_cloud = o3d.io.read_point_cloud("workflow_processed_3d_models/regular_point_cloud_low_density.ply")
+        o3d.io.write_point_cloud("workflow_data/CT_pointcloud_resampled.ply", pcd)
+        point_cloud = o3d.io.read_point_cloud("workflow_data/CT_pointcloud_resampled.ply")
 
         # Extract the points as a numpy array
         points = point_cloud.points
 
         # Define the output file name
-        output_file = "regular_point_cloud_low_density.XYZ"
+        output_file = "workflow_data/CT_pointcloud_resampled.XYZ"
 
         # Write the points to the text file
         with open(output_file, "w") as file:
