@@ -27,13 +27,13 @@ if __name__ == "__main__":
     conversion_factor = 1 / 98.0
 
     # Input file paths
-    input_file_OCT = 'workflow_data/OCT ArCoMo3.tif'
+    input_file_OCT = 'workflow_data/OCT.tif'
     input_file_centerline = "workflow_data/centerline.txt"
     # Ulit images
     letter_x_mask_path = "workflow_utils/image_X.jpg"
 
     # Displaying and saving options
-    save_file = True
+    save_file = False
     display_results = False
     save_images_for_controll = False 
 
@@ -51,6 +51,10 @@ if __name__ == "__main__":
     # Make smoother bifurication curves
     pc_smoother = PointCloudSmoothingVisualizer(input_file_centerline)
     smoothed_pc_centerline = pc_smoother.pc_centerline
+    if False:
+        with open("workflow_processed_data_output/centerline_resmapled.txt", 'w') as file:
+            for point in smoothed_pc_centerline:
+                file.write(f"{point[0]:.2f} {point[1]:.2f} {point[2]:.2f}\n")
 
     # Resample center line
     resampled_pc_centerline = center_line_registrator.resample_center_line(smoothed_pc_centerline, display_results, z_distance)
@@ -68,9 +72,9 @@ if __name__ == "__main__":
     centerline_registration_start = center_line_registrator.find_closest_point_index(resampled_pc_centerline, registration_point_CT)
     
     # REMOVE !!!!!!!!!!!!!!!!!
-    OCT_registration_frame = 203
-    print(centerline_registration_start)
-    centerline_registration_start = 710
+    if False:
+        OCT_registration_frame = 203
+        centerline_registration_start = 710
     oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_CT, OCT_registration_frame, z_distance, display_results)
 
     # rotate OCT_frames
