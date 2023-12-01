@@ -34,5 +34,8 @@ colorized_point_cloud = o3d.geometry.PointCloud()
 colorized_point_cloud.points = o3d.utility.Vector3dVector(points)
 colorized_point_cloud.colors = o3d.utility.Vector3dVector(colormap)
 
+# Load the mesh from the second PLY file
+ply_file_2 = "phantom_data/GT_stenose_self_centerline_good.ply"
+mesh_2 = o3d.io.read_triangle_mesh(ply_file_2)
 # Visualize the colorized point cloud as a heatmap
-o3d.visualization.draw_geometries([colorized_point_cloud], window_name="Heatmap Point Cloud")
+o3d.visualization.draw_geometries([colorized_point_cloud, mesh_2], window_name="Heatmap Point Cloud")

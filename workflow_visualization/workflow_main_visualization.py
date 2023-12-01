@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     # OCT image start and stop frame
     OCT_start_frame = 4
-    OCT_end_frame = 290
+    OCT_end_frame = 8
 
     # Initialize the z-coordinate for the first image
     z_distance = 0.2  # Increment by 0.2 or 0.1mm
@@ -38,11 +38,11 @@ if __name__ == "__main__":
     save_images_for_controll = False 
 
     # Extract oct lumen contour and align them
-    if False:
+    if True:
         oct_lumen_extractor = oct_lumen_extraction()
         OCT_registration_frame = oct_lumen_extractor.find_registration_frame(letter_x_mask_path, input_file_OCT, crop, color1, color2, display_results)
         registration_point = oct_lumen_extractor.get_registration_point(color1, color2, input_file_OCT, crop, OCT_registration_frame, display_results, z_distance, save_file, conversion_factor)
-        oct_lumen_extractor.process_tif_file(crop, input_file_OCT, OCT_end_frame, OCT_start_frame, z_distance, conversion_factor, save_file, color1, color2, smoothing_kernel_size, threshold_value, display_results, registration_point, OCT_registration_frame, save_images_for_controll)
+        my_aligned_images = oct_lumen_extractor.process_tif_file(crop, input_file_OCT, OCT_end_frame, OCT_start_frame, z_distance, conversion_factor, save_file, color1, color2, smoothing_kernel_size, threshold_value, display_results, registration_point, OCT_registration_frame, save_images_for_controll)
 
     # Parse OCT frames
     center_line_registrator = center_line_registration()
@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     display_results = True
     #register frames onto centerline
-    center_line_registrator.register_OCT_frames_onto_centerline(rotated_grouped_OCT_frames, centerline_registration_start, centerline_vectors,
+    center_line_registrator.register_OCT_frames_onto_centerline(my_aligned_images, rotated_grouped_OCT_frames, centerline_registration_start, centerline_vectors,
                                         resampled_pc_centerline, OCT_registration_frame, z_distance, rotated_registration_point_OCT, save_file, display_results)
 
     # Create CT point cloud from ply file

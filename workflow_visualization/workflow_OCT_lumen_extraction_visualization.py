@@ -124,7 +124,7 @@ class oct_lumen_extraction:
         return rot_angle, translation_x, translation_y
 
 
-    def icp_alignment(self, first_contour, points, reference_points, transformation_matrix_previous, display_images, registration_point, image, page, max_iterations=100, distance_threshold=100, convergence_translation_threshold=1e-3,
+    def icp_alignment(self, first_contour, points, reference_points, transformation_matrix_previous, display_images, registration_point, image, page, gray_image, z_coordinate, max_iterations=100, distance_threshold=100, convergence_translation_threshold=1e-3,
             convergence_rotation_threshold=1e-4, point_pairs_threshold=10, verbose=False):
         """
         An implementation of the Iterative Closest Point algorithm that matches a set of M 2D points to another set
@@ -164,7 +164,8 @@ class oct_lumen_extraction:
         translation_x_mm = []
         translation_y_mm = []
         distance_between_points = []
-
+        height, width = gray_image.shape
+        scaling = 98
         total_rotation_degrees = 0
         total_trans_x = 0
         total_trans_y = 0
@@ -301,7 +302,19 @@ class oct_lumen_extraction:
         with open("workflow_processed_data_output/image_translations/alignement_translations.txt", 'a') as file:
             file.write(f"{page} {total_trans_x:.2f} {total_trans_y:.2f} {total_rotation_degrees:.2f}\n")
 
-        return points, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point
+        rotation_matrix_alignement = np.array([[np.cos(total_rotation_degrees), -np.sin(total_rotation_degrees), 0.0],
+                [np.sin(total_rotation_degrees), np.cos(total_rotation_degrees), 0.0],
+                [0.0, 0.0, 1.0]])
+        translation_vector_alignment = np.array([total_trans_x/scaling, total_trans_y/scaling, 0.0])
+
+
+        my_points = []
+        for i in range(gray_image.shape[0]):
+            for j in range(gray_image.shape[1]):
+                single_point = np.array([j/scaling, i/scaling, page])
+                rotated_point__ = np.dot(rotation_matrix_alignement, single_point)
+                my_points.append(rotated_point__ + translation_vector_alignment)
+        return points, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point, my_points
 
 
     def find_registration_frame(self, letter_x_mask_path, input_file, crop, color1, color2, display_images):
@@ -466,11 +479,13 @@ class oct_lumen_extraction:
         previous_contour = None
         point_cloud = []
         transformation_matrix_previous = None
+        my_aligned_images = []
         with Image.open(input_file) as im:
             for page in range(OCT_start_frame, OCT_end_frame, 1):
                 print(page)
                 im.seek(page)  # Move to the current page (frame)
                 image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
+                gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
                 open_cv_image = image[crop:, :, ::-1].copy()  # Crop image at xxx pixels from top
 
@@ -488,6 +503,15 @@ class oct_lumen_extraction:
                 threshold_mask = self.smooth_and_threshold(binary_mask_A_removed, smoothing_kernel_size, threshold_value)
                 if display_images:
                     self.plt_cv2_images('Thresholded image', threshold_mask)
+
+                height, width = gray_image.shape
+                scaling = 98
+                my_points = []
+                for i in range(gray_image.shape[0]):
+                    for j in range(gray_image.shape[1]):
+                        single_point = np.array([j/scaling, i/scaling, page])
+                        my_points.append(single_point)
+                aligned_image_points = my_points
 
                 # fit a spline to the contour
                 current_contour = self.spline_fitting(threshold_mask, display_images, save_images_for_controll, page)
@@ -514,9 +538,8 @@ class oct_lumen_extraction:
                         
                     if previous_contour is not None:
                         # Perform ICP alignment.
-                        aligned_source_spline, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point = self.icp_alignment(first_contour,
-                                                                                                                                                                     current_contour, previous_contour, transformation_matrix_previous, display_images, registration_point, image, page)
-                        
+                        aligned_source_spline, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point, aligned_image_points = self.icp_alignment(first_contour,
+                                                                                                                                                                     current_contour, previous_contour, transformation_matrix_previous, display_images, registration_point, image, page, gray_image, z_coordinate)
                         # Convert the spline points to NumPy arrays.
                         source_points = np.array(current_contour)
                         aligned_source_points = np.array(aligned_source_spline)
@@ -572,6 +595,9 @@ class oct_lumen_extraction:
 
                     # Shift the points to have the centroid at (0, 0).
                     aligned_source_points_shifted = aligned_source_points - centroid
+                    aligned_image_points_shifted = np.copy(np.array(aligned_image_points))
+                    aligned_image_points_shifted[:, 0] -= centroid[0]/scaling
+                    aligned_image_points_shifted[:, 1] -= centroid[1]/scaling
 
                     # Create a 3D point cloud with incremental z-coordinate and convert into mm unit.
                     point_cloud_current = [(xi * conversion_factor, yi * conversion_factor, z_coordinate) for xi, yi in
@@ -599,6 +625,9 @@ class oct_lumen_extraction:
                     if first_contour_flag or True:
                         previous_contour = aligned_source_points
                         #first_contour_flag = False
+                    
+                    my_aligned_images.append(aligned_image_points_shifted)
+
                 z_coordinate += z_offset  # Increment z-coordinate
 
         x_filtered = []
@@ -619,6 +648,7 @@ class oct_lumen_extraction:
         ax.set_zlabel('Pz')
         plt.show()
 
+        return my_aligned_images
 
     def find_center_of_letter_X(self, binary_mask):
         # Load the binary mask and the letter 'x' mask

@@ -1,7 +1,7 @@
 from workflow_OCT_lumen_extraction_phantom import oct_lumen_extraction
 from workflow_center_line_registration_phantom import center_line_registration
-from workflow_visual_pointcloud_editing_VTK_point import point_cloud_visual_editing
-from workflow_center_line_smooting_gui import PointCloudSmoothingVisualizer
+from workflow_visual_pointcloud_editing_VTK_point_phantom import point_cloud_visual_editing
+from workflow_center_line_smooting_gui_phantom import PointCloudSmoothingVisualizer
 
 if __name__ == "__main__":
     color1 = (0, 255, 0)  # Green circle
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     # Extract oct lumen contour and align them
     oct_lumen_extractor = oct_lumen_extraction()
-    if False:
+    if True:
         registration_point = oct_lumen_extractor.get_registration_point(color1, color2, input_file, crop, carina_point_frame, display_results, z_distance, save_file, conversion_factor)
         oct_lumen_extractor.process_tif_file(crop, input_file, z_distance, conversion_factor, save_file, color1, color2, smoothing_kernel_size, threshold_value, display_results, registration_point, carina_point_frame, save_images_for_controll)
 
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     # Visual point cloud editing:
     point_cloud_visual_editior = point_cloud_visual_editing()
     file_path_1 = "phantom_data/noisy_downsampled_point_cloud_with_branch.txt"
-    file_path_2 = "workflow_processed_data_output/saved_registered_splines.txt"
+    file_path_2 = "workflow_processed_data_output/phantom_data/saved_registered_splines.txt"
     point_cloud_visual_editior.run_editor(file_path_1, file_path_2)
     point_cloud_save = point_cloud_visual_editior.fused_point_cloud
     

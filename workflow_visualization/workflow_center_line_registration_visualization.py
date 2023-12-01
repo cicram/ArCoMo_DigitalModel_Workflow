@@ -7,7 +7,41 @@ import numpy as np
 from PIL import Image
 import vtkmodules.all as vtk
 
-class center_line_registration: 
+class center_line_registration:
+    def parse_alignement(self, file_path):
+        data = []
+        # Open the text file for reading
+        with open(file_path, 'r') as file:
+            for line in file:
+                # Split the line into three values
+                parts = line.strip().split()
+
+                # Ensure there are three values on each line
+                if len(parts) == 4:
+                    # Parse the values as floats and append them to the respective lists
+                    page, trans_x, trans_y, rotation = float(parts[0]), float(parts[1]), float(parts[2]), float(parts[3])
+                    data.append((page, trans_x, trans_y, rotation))
+
+        data = np.array(data)
+        return data
+
+    def parse_rot_angle_co_reg(self, file_path):
+        data = []
+        # Open the text file for reading
+        with open(file_path, 'r') as file:
+            for line in file:
+                # Split the line into three values
+                parts = line.strip().split()
+
+                # Ensure there are three values on each line
+                if len(parts) == 1:
+                    # Parse the values as floats and append them to the respective lists
+                    rotation = float(parts[0])
+                    data.append((rotation))
+
+        data = np.array(data)
+        return data
+
     def parse_registration_point_OCT(self, file_path):
         data = []
         # Open the text file for reading
@@ -297,14 +331,14 @@ class center_line_registration:
         return closest_point_index
 
 
-    def register_OCT_frames_onto_centerline(self, grouped_OCT_frames, centerline_registration_start, centerline_vectors,
+    def register_OCT_frames_onto_centerline(self, my_aligned_images, grouped_OCT_frames, centerline_registration_start, centerline_vectors,
                                             resampled_pc_centerline, OCT_registration_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
         saved_registered_splines = []
         rotated_vectors = []
         target_centerline_point_display = []
         orig_frames = []
         z_level_preivous = None
-
+        my_image_points = np.array(my_aligned_images)
         ####################################################################
         # Create a VTK renderer
         renderer = vtk.vtkRenderer()
@@ -329,7 +363,6 @@ class center_line_registration:
             if z_level > z_level_registration:
                 count += 1
         closest_centerline_point_idx = centerline_registration_start - count
-
         # Iterate through the splines and align them on the centerline points.
         for z_level, frame_points in grouped_OCT_frames.items():
             # Find the corresponding centerline point and its vector.
@@ -359,12 +392,18 @@ class center_line_registration:
             ####################################################################################
             input_file_pullback = "C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/workflow_data/OCT.tif"
             print(z_level)
-            if z_level == 1 or z_level == 10 or z_level == 20 or z_level == 30 or z_level == 40 or z_level == 50:
+            if z_level == 57: #or z_level == 10 or z_level == 20 or z_level == 30 or z_level == 40 or z_level == 50:
                 with Image.open(input_file_pullback) as im_pullback:
                     # centerline_point = center_line[idx_start - page_pullback]
 
                     # Image to be loaded
-                    page_pullback = round((57 - z_level)/0.2)
+                    page_pullback = round((57 - z_level)/0.2) + 4
+                    page_pullback = 6
+
+                    indices = np.where(my_image_points[:, :, 2] == page_pullback)
+                    mypoints = np.array([my_image_points[i, j] for i, j in zip(indices[0], indices[1])])
+                    mypoints[:,2] = z_visual
+                    itr = page_pullback - 4 
                     im_pullback.seek(page_pullback)  # Move to the current page (frame)
                     image_pullback = np.array(im_pullback.convert('RGB'))  # Convert PIL image to NumPy array
                     image_pullback = image_pullback[:, :, ::-1].copy()  # Crop image at xxx pixels from top
@@ -378,18 +417,30 @@ class center_line_registration:
                     # Create a VTK structured grid
                     structured_grid = vtk.vtkStructuredGrid()
                     structured_grid.SetDimensions(gray_image.shape[1], gray_image.shape[0], 1)
-
+                    structured_grid_2 = vtk.vtkStructuredGrid()
+                    structured_grid_2.SetDimensions(gray_image.shape[1], gray_image.shape[0], 1)
                     # Create VTK points and assign the image data
+                    points_2 = vtk.vtkPoints()
+                    colors_2 = vtk.vtkUnsignedCharArray()
+                    colors_2.SetNumberOfComponents(3)  # RGB has three components
+                    colors_2.SetName("Colors")
+
                     points = vtk.vtkPoints()
                     colors = vtk.vtkUnsignedCharArray()
                     colors.SetNumberOfComponents(3)  # RGB has three components
                     colors.SetName("Colors")
-                    mypoints = []
-                    for i in range(gray_image.shape[0]):
-                        for j in range(gray_image.shape[1]):
-                            mypoints.append(np.array([(j - width / 2) / scaling, (i - height / 2) / scaling, z_visual]))
+
+                    rot_angle_co_reg = self.parse_rot_angle_co_reg("C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/workflow_processed_data_output/image_translations/rotation_angel_registration.txt")
+                    data_alignement = self.parse_alignement("C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/workflow_processed_data_output/image_translations/alignement_translations.txt")
+                    rotation_matrix_co_regist = np.array([[np.cos(rot_angle_co_reg[0]), -np.sin(rot_angle_co_reg[0]), 0.0],
+                                                [np.sin(rot_angle_co_reg[0]), np.cos(rot_angle_co_reg[0]), 0.0],
+                                                [0.0, 0.0, 1.0]])
+                    rotation_matrix_alignement = np.array([[np.cos(data_alignement[itr][2]), -np.sin(data_alignement[itr][2]), 0.0],
+                                    [np.sin(data_alignement[itr][2]), np.cos(data_alignement[itr][2]), 0.0],
+                                    [0.0, 0.0, 1.0]])
+                    translation_vector_alignment = np.array([data_alignement[itr][0]/scaling, data_alignement[itr][1]/scaling, 0.0])
                     
-                    mypoints = np.array(mypoints)
+
                     rotated_points = np.dot(rotation_matrix, mypoints.T).T  # Apply rotation
                     rotated_points += translation_vector
 
@@ -417,6 +468,37 @@ class center_line_registration:
                     # Add the actor to the renderer
                     renderer.AddActor(actor)
 
+                    my_points_2 = []
+                    for i in range(gray_image.shape[0]):
+                        for j in range(gray_image.shape[1]):
+                            single_point = np.array([(j - width / 2)/scaling, (i - height / 2)/scaling, z_visual+1])
+                            my_points_2.append(single_point)
+                    
+                    rotated_points_2 = np.dot(rotation_matrix, np.array(my_points_2).T).T  # Apply rotation
+                    rotated_points_2 += translation_vector
+                    for i in range(height):
+                        for j in range(width):
+                            points_2.InsertNextPoint(rotated_points_2[i * width + j])
+                            rgb_values = image_pullback[i, j]
+                            colors_2.InsertNextTuple3(rgb_values[2], rgb_values[1], rgb_values[0])
+
+                    # Set the points and scalars for the structured grid
+                    structured_grid_2.SetPoints(points_2)
+                    structured_grid_2.GetPointData().SetScalars(colors_2)
+
+                    # Create a VTK mapper for the structured grid
+                    mapper_2 = vtk.vtkDataSetMapper()
+                    mapper_2.SetInputData(structured_grid_2)
+                    mapper_2.ScalarVisibilityOn()
+                    mapper_2.SetScalarModeToUsePointData()
+                    mapper_2.SetScalarRange(0, 255)  # Set the range of grayscale values
+
+                    # Create a VTK actor for the structured grid
+                    actor_2 = vtk.vtkActor()
+                    actor_2.SetMapper(mapper_2)
+
+                    # Add the actor to the renderer
+                    renderer.AddActor(actor_2)
             
             ####################################################################################
 
@@ -560,48 +642,50 @@ class center_line_registration:
 
         # Add the actor for the .obj file to the renderer
         renderer.AddActor(obj_actor_innershell)
-        # Create a cube axes actor
-        cube_axes_actor = vtk.vtkCubeAxesActor()
-        renderer.AddActor(cube_axes_actor)
 
-        # Set cube axes actor properties
-        cube_axes_actor.SetUseTextActor3D(1)
-        cube_axes_actor.SetBounds(obj_actor_innershell.GetBounds())
-        cube_axes_actor.SetCamera(renderer.GetActiveCamera())
-        cube_axes_actor.GetTitleTextProperty(0).SetFontSize(1)
+        if False:
+            # Create a cube axes actor
+            cube_axes_actor = vtk.vtkCubeAxesActor()
+            renderer.AddActor(cube_axes_actor)
 
-        # Customize cube axes actor appearance
-        tickColor = [1.0, 0.0, 0.0]  # Set your desired tick color
-        cube_axes_actor.GetTitleTextProperty(0).SetColor(tickColor)
-        cube_axes_actor.GetLabelTextProperty(0).SetColor(tickColor)
-        cube_axes_actor.GetTitleTextProperty(1).SetColor(tickColor)
-        cube_axes_actor.GetLabelTextProperty(1).SetColor(tickColor)
-        cube_axes_actor.GetTitleTextProperty(2).SetColor(tickColor)
-        cube_axes_actor.GetLabelTextProperty(2).SetColor(tickColor)
-        cube_axes_actor.GetXAxesLinesProperty().SetColor(tickColor)
-        cube_axes_actor.GetYAxesLinesProperty().SetColor(tickColor)
-        cube_axes_actor.GetZAxesLinesProperty().SetColor(tickColor)
-        cube_axes_actor.GetXAxesGridlinesProperty().SetColor(tickColor)
-        cube_axes_actor.GetYAxesGridlinesProperty().SetColor(tickColor)
-        cube_axes_actor.GetZAxesGridlinesProperty().SetColor(tickColor)
-        cube_axes_actor.XAxisMinorTickVisibilityOff()
-        cube_axes_actor.YAxisMinorTickVisibilityOff()
-        cube_axes_actor.ZAxisMinorTickVisibilityOff()
+            # Set cube axes actor properties
+            cube_axes_actor.SetUseTextActor3D(1)
+            cube_axes_actor.SetBounds(obj_actor_innershell.GetBounds())
+            cube_axes_actor.SetCamera(renderer.GetActiveCamera())
+            cube_axes_actor.GetTitleTextProperty(0).SetFontSize(1)
 
-        cube_axes_actor.SetXTitle("X")
-        cube_axes_actor.SetYTitle("Y")
-        cube_axes_actor.SetZTitle("Z")
-        cube_axes_actor.SetFlyModeToStaticEdges()
+            # Customize cube axes actor appearance
+            tickColor = [1.0, 0.0, 0.0]  # Set your desired tick color
+            cube_axes_actor.GetTitleTextProperty(0).SetColor(tickColor)
+            cube_axes_actor.GetLabelTextProperty(0).SetColor(tickColor)
+            cube_axes_actor.GetTitleTextProperty(1).SetColor(tickColor)
+            cube_axes_actor.GetLabelTextProperty(1).SetColor(tickColor)
+            cube_axes_actor.GetTitleTextProperty(2).SetColor(tickColor)
+            cube_axes_actor.GetLabelTextProperty(2).SetColor(tickColor)
+            cube_axes_actor.GetXAxesLinesProperty().SetColor(tickColor)
+            cube_axes_actor.GetYAxesLinesProperty().SetColor(tickColor)
+            cube_axes_actor.GetZAxesLinesProperty().SetColor(tickColor)
+            cube_axes_actor.GetXAxesGridlinesProperty().SetColor(tickColor)
+            cube_axes_actor.GetYAxesGridlinesProperty().SetColor(tickColor)
+            cube_axes_actor.GetZAxesGridlinesProperty().SetColor(tickColor)
+            cube_axes_actor.XAxisMinorTickVisibilityOff()
+            cube_axes_actor.YAxisMinorTickVisibilityOff()
+            cube_axes_actor.ZAxisMinorTickVisibilityOff()
 
-        # Apply transformation to the cube axes actor
-        transform = vtk.vtkTransform()
-        transform.Translate(0.0, 0.0, 0.0)
-        transform.RotateZ(-90)
-        transform.RotateY(-90)
-        cube_axes_actor.SetUserTransform(transform)
+            cube_axes_actor.SetXTitle("X")
+            cube_axes_actor.SetYTitle("Y")
+            cube_axes_actor.SetZTitle("Z")
+            cube_axes_actor.SetFlyModeToStaticEdges()
 
-        # Add actors to the renderer
-        renderer.AddActor(cube_axes_actor)
+            # Apply transformation to the cube axes actor
+            transform = vtk.vtkTransform()
+            transform.Translate(0.0, 0.0, 0.0)
+            transform.RotateZ(-90)
+            transform.RotateY(-90)
+            cube_axes_actor.SetUserTransform(transform)
+
+            # Add actors to the renderer
+            renderer.AddActor(cube_axes_actor)
 
         # Reset camera and render
         renderer.ResetCamera()

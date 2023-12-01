@@ -445,6 +445,7 @@ class oct_lumen_extraction:
         z_coordinate = 0
         previous_contour = None
         point_cloud = []
+        pc_unaligned = []
         transformation_matrix_previous = None
         with Image.open(input_file) as im:
             for page in range(im.n_frames):
@@ -474,7 +475,7 @@ class oct_lumen_extraction:
                 if current_contour is not None:
 
                     # save unaligned pointcloud
-                    if save_file:
+                    if save_file or True:
                         # Calculate the centroid of the aligned points.
                         centroid_unaligned = np.mean(current_contour, axis=0)
 
@@ -484,11 +485,11 @@ class oct_lumen_extraction:
                         # Create a 3D point cloud with incremental z-coordinate and convert into mm unit.
                         unaligned_current_contour = [(xi * conversion_factor, yi * conversion_factor, z_coordinate) for xi, yi in
                                             unaligned_source_points_shifted]
-
+                        pc_unaligned.append(unaligned_current_contour)
                         # Write the coordinates to the text file
-                        with open("workflow_processed_data_output/unaligned_OCT_frames.txt", 'a') as file:
-                            for coord in unaligned_current_contour:
-                                file.write(f"{coord[0]:.2f} {coord[1]:.2f} {coord[2]:.2f}\n")
+                        #with open("workflow_processed_data_output/unaligned_OCT_frames.txt", 'a') as file:
+                         #   for coord in unaligned_current_contour:
+                          #      file.write(f"{coord[0]:.2f} {coord[1]:.2f} {coord[2]:.2f}\n")
                         
                     if previous_contour is not None:
                         # Perform ICP alignment.
@@ -591,6 +592,19 @@ class oct_lumen_extraction:
         fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(x_filtered, y_filtered, z_filtered, c="red", marker='o')
+        
+        x_filtered = []
+        y_filtered = []
+        z_filtered = []
+
+        for point in pc_unaligned:
+            x , y, z = zip(*point)
+            x_filtered.append(x[::20])
+            y_filtered.append(y[::20])
+            z_filtered.append(z[::20])
+
+        ax.scatter(x_filtered, y_filtered, z_filtered, c="blue", marker='o')
+
         ax.set_xlabel('Px')
         ax.set_ylabel('Py')
         ax.set_zlabel('Pz')
