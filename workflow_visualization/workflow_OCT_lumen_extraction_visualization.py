@@ -174,6 +174,14 @@ class oct_lumen_extraction:
         source_points_orig = np.copy(points)
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(reference_points)
         image_orig = np.copy(image)
+        my_points__ = []
+        for i in range(gray_image.shape[0]):
+            for j in range(gray_image.shape[1]):
+                single_point = np.array([j/scaling, i/scaling])
+                my_points__.append(single_point)
+        my_points_ = np.array(my_points__)
+        print("page: " + str(page) + " icp algo applied")
+
         for iter_num in range(max_iterations):
             if verbose:
                 print('------ iteration', iter_num, '------')
@@ -216,6 +224,10 @@ class oct_lumen_extraction:
             updated_registration_point[0] += closest_translation_x
             updated_registration_point[1] += closest_translation_y
 
+            my_points = np.dot(my_points_, rot.T)
+            my_points[:, 0] += closest_translation_x/scaling
+            my_points[:, 1] += closest_translation_y/scaling
+
             if False:
                 # Image transposition
                 # Rotate the image using scipy.ndimage.rotate
@@ -232,6 +244,7 @@ class oct_lumen_extraction:
             # update 'points' for the next iteration
             points = aligned_points
             registration_point_ = updated_registration_point
+            my_points_ = my_points
             # update transformation history
             transformation_history.append(np.hstack((rot, np.array([[closest_translation_x], [closest_translation_y]]))))
             
@@ -306,15 +319,11 @@ class oct_lumen_extraction:
                 [np.sin(total_rotation_degrees), np.cos(total_rotation_degrees), 0.0],
                 [0.0, 0.0, 1.0]])
         translation_vector_alignment = np.array([total_trans_x/scaling, total_trans_y/scaling, 0.0])
-
-
-        my_points = []
-        for i in range(gray_image.shape[0]):
-            for j in range(gray_image.shape[1]):
-                single_point = np.array([j/scaling, i/scaling, page])
-                rotated_point__ = np.dot(rotation_matrix_alignement, single_point)
-                my_points.append(rotated_point__ + translation_vector_alignment)
-        return points, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point, my_points
+        my_points_return = []
+        for point in my_points:
+            my_points_return.append(np.array([point[0], point[1], page]))
+        
+        return points, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point, my_points_return
 
 
     def find_registration_frame(self, letter_x_mask_path, input_file, crop, color1, color2, display_images):
@@ -485,8 +494,14 @@ class oct_lumen_extraction:
                 print(page)
                 im.seek(page)  # Move to the current page (frame)
                 image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
-                gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                image_croped = image[crop:, :, ::-1].copy()
+                gray_image = cv2.cvtColor(image_croped, cv2.COLOR_BGR2GRAY)
 
+                # Plot the grayscale image
+                if False:
+                    plt.imshow(gray_image, cmap='gray')
+                    plt.title('Grayscale Image')
+                    plt.show()
                 open_cv_image = image[crop:, :, ::-1].copy()  # Crop image at xxx pixels from top
 
                 # Apply the color filter
@@ -611,7 +626,7 @@ class oct_lumen_extraction:
                         aligned_source_points = np.array(aligned_source_points)
                         plt.plot(aligned_source_points[:, 0] - centroid[0], aligned_source_points[:, 1] - centroid[1], "x")
                         plt.plot(current_contour[:, 0] - centroid[0], current_contour[:, 1] - centroid[1], "x")
-                        plt.show()
+                        #plt.show()
                     if save_file:
                         # Write the coordinates to the text file
                         with open("workflow_processed_data_output/output_point_cloud.txt", 'a') as file:
@@ -628,6 +643,32 @@ class oct_lumen_extraction:
                     
                     my_aligned_images.append(aligned_image_points_shifted)
 
+                    ##############################################################
+                    fig = plt.figure()
+                    ax = fig.add_subplot(111, projection='3d')
+                    # Show the plot
+                    x_filtered = []
+                    y_filtered = []
+                    z_filtered = []
+                    for frame_points in aligned_image_points_shifted:
+                        x_filtered.append(frame_points[0])
+                        y_filtered.append(frame_points[1])
+                        z_filtered.append(z_coordinate)
+                    ax.scatter(x_filtered[::120], y_filtered[::120], z_filtered[::120], c="blue", marker='o')
+                    x_filtered = []
+                    y_filtered = []
+                    z_filtered = []
+                    for frame_points in aligned_source_points_shifted:
+                            x_filtered.append(frame_points[0]/scaling)
+                            y_filtered.append(frame_points[1]/scaling)
+                            z_filtered.append(z_coordinate)
+                    ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
+                    ax.set_xlabel('Px')
+                    ax.set_ylabel('Py')
+                    ax.set_zlabel('Pz')
+                    #plt.show()
+
+                    ##############################################################
                 z_coordinate += z_offset  # Increment z-coordinate
 
         x_filtered = []
@@ -646,7 +687,7 @@ class oct_lumen_extraction:
         ax.set_xlabel('Px')
         ax.set_ylabel('Py')
         ax.set_zlabel('Pz')
-        plt.show()
+        #plt.show()
 
         return my_aligned_images
 

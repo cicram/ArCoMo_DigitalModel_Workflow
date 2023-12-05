@@ -260,7 +260,7 @@ class point_cloud_visual_editing:
         self.fuse_point_clouds()
 
         # Save the fused point cloud to a text file
-        self.save_point_cloud_to_file("workflow_processed_data_output/fused_point_cloud_with_branch.xyz")
+        self.save_point_cloud_to_file("workflow_processed_data_output/fused_point_cloud.xyz")
 
         print("Fused point clouds saved to 'fused_point_cloud.txt'.")
 

@@ -5,13 +5,28 @@ from workflow_center_line_smooting_gui_visualization import PointCloudSmoothingV
 import open3d as o3d
 
 
+def parse_my_points(file_path):
+    data = []
+    # Open the text file for reading
+    with open(file_path, 'r') as file:
+        for line in file:
+            # Split the line into three values
+            parts = line.strip().split()
+
+            # Ensure there are three values on each line
+            if len(parts) == 3:
+                # Parse the values as floats and append them to the respective lists
+                px, py, pz = float(parts[0]), float(parts[1]), float(parts[2])
+                data.append((px, py, pz))
+    return np.array(data[0])
+
 if __name__ == "__main__":
     color1 = (0, 255, 0)  # Green circle
     color2 = (192, 220, 192)  # Circle dots color
 
     # OCT image start and stop frame
     OCT_start_frame = 4
-    OCT_end_frame = 8
+    OCT_end_frame = 285
 
     # Initialize the z-coordinate for the first image
     z_distance = 0.2  # Increment by 0.2 or 0.1mm
@@ -38,11 +53,16 @@ if __name__ == "__main__":
     save_images_for_controll = False 
 
     # Extract oct lumen contour and align them
-    if True:
+    if False:
         oct_lumen_extractor = oct_lumen_extraction()
         OCT_registration_frame = oct_lumen_extractor.find_registration_frame(letter_x_mask_path, input_file_OCT, crop, color1, color2, display_results)
         registration_point = oct_lumen_extractor.get_registration_point(color1, color2, input_file_OCT, crop, OCT_registration_frame, display_results, z_distance, save_file, conversion_factor)
         my_aligned_images = oct_lumen_extractor.process_tif_file(crop, input_file_OCT, OCT_end_frame, OCT_start_frame, z_distance, conversion_factor, save_file, color1, color2, smoothing_kernel_size, threshold_value, display_results, registration_point, OCT_registration_frame, save_images_for_controll)
+        with open("workflow_processed_data_output/my_aligned_points.txt", "w") as file:
+            # Iterate through each array in the list
+            for point_array in my_aligned_images:
+                for point in point_array:
+                    file.write(f"{point[0]:.2f} {point[1]:.2f} {point[2]:.2f}\n")
 
     # Parse OCT frames
     center_line_registrator = center_line_registration()
@@ -70,15 +90,72 @@ if __name__ == "__main__":
 
     # Adapt z value
     centerline_registration_start = center_line_registrator.find_closest_point_index(resampled_pc_centerline, registration_point_CT)
-    
+    print(centerline_registration_start)
     # REMOVE !!!!!!!!!!!!!!!!!
-    if True:
+    OCT_registration_frame = 203
+
+    if False:
         OCT_registration_frame = 203
         centerline_registration_start = 710
     oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_CT, OCT_registration_frame, z_distance, display_results)
 
     # rotate OCT_frames
     rotated_grouped_OCT_frames = center_line_registrator.rotate_frames(grouped_OCT_frames, oct_lumen_rotation_matrix)
+    import numpy as np
+    print("start parsing")
+
+    my_aligned_images_parsed = np.loadtxt("workflow_processed_data_output/my_aligned_points.txt")
+    print("stop parsing")
+
+
+    my_aligned_images_rotated = np.dot(my_aligned_images_parsed, oct_lumen_rotation_matrix.T)
+    import matplotlib.pyplot as plt
+    if False:
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        # Show the plot
+        x_filtered = []
+        y_filtered = []
+        z_filtered = []
+        for itr in range(len(my_aligned_images)):
+            for frame_points in my_aligned_images[itr]:
+                x_filtered.append(frame_points[0])
+                y_filtered.append(frame_points[1])
+                z_filtered.append(frame_points[2])
+        ax.scatter(x_filtered[::120], y_filtered[::120], z_filtered[::120], c="blue", marker='o')
+        ax.set_xlabel('Px')
+        ax.set_ylabel('Py')
+        ax.set_zlabel('Pz')
+        #plt.show()
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        # Show the plot
+        x_filtered = []
+        y_filtered = []
+        z_filtered = []
+        for itr in range(len(my_aligned_images_rotated)):
+            for frame_points in my_aligned_images_rotated[itr]:
+                x_filtered.append(frame_points[0])
+                y_filtered.append(frame_points[1])
+                z_filtered.append(0.2*itr)
+        ax.scatter(x_filtered[::120], y_filtered[::120], z_filtered[::120], c="blue", marker='o')
+        x_filtered = []
+        y_filtered = []
+        z_filtered = []
+        for z_level, frame_points in grouped_OCT_frames.items():
+            if z_level > 56.3:
+                for i, data in enumerate(frame_points):
+                        x_filtered.append(frame_points[i][0])
+                        y_filtered.append(frame_points[i][1])
+                        z_filtered.append(frame_points[i][2])
+        ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
+        ax.set_xlabel('Px')
+        ax.set_ylabel('Py')
+        ax.set_zlabel('Pz')
+        #plt.show()
+
 
     if display_results:
         #------------------------------------------#
@@ -104,7 +181,7 @@ if __name__ == "__main__":
 
     display_results = True
     #register frames onto centerline
-    center_line_registrator.register_OCT_frames_onto_centerline(my_aligned_images, rotated_grouped_OCT_frames, centerline_registration_start, centerline_vectors,
+    center_line_registrator.register_OCT_frames_onto_centerline(my_aligned_images_rotated, rotated_grouped_OCT_frames, centerline_registration_start, centerline_vectors,
                                         resampled_pc_centerline, OCT_registration_frame, z_distance, rotated_registration_point_OCT, save_file, display_results)
 
     # Create CT point cloud from ply file

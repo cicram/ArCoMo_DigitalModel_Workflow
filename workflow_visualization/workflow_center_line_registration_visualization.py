@@ -338,7 +338,7 @@ class center_line_registration:
         target_centerline_point_display = []
         orig_frames = []
         z_level_preivous = None
-        my_image_points = np.array(my_aligned_images)
+        my_image_points = my_aligned_images
         ####################################################################
         # Create a VTK renderer
         renderer = vtk.vtkRenderer()
@@ -359,6 +359,24 @@ class center_line_registration:
         # Find start idx to know at what centerline index they have to be aligned 
         z_level_registration = round(OCT_registration_frame * z_distance, 1)
         count = 0
+        if False:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            # Show the plot
+            x_filtered = []
+            y_filtered = []
+            z_filtered = []
+            for z_level, frame_points in grouped_OCT_frames.items():
+                for i, data in enumerate(frame_points):
+                    x_filtered.append(frame_points[i][0])
+                    y_filtered.append(frame_points[i][1])
+                    z_filtered.append(frame_points[i][2])
+                print("z_level: "+str(z_level))
+                print("z_visual: "+str(frame_points[0][2]))
+
+            ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
+            plt.show()
+
         for z_level, frame_points in grouped_OCT_frames.items():
             if z_level > z_level_registration:
                 count += 1
@@ -388,25 +406,58 @@ class center_line_registration:
             # Perform the translation to center the spline on the centerline point.
             translation_vector = target_centerline_point - registered_spline.mean(axis=0)
             registered_spline += translation_vector
-
             ####################################################################################
             input_file_pullback = "C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/workflow_data/OCT.tif"
-            print(z_level)
-            if z_level == 57: #or z_level == 10 or z_level == 20 or z_level == 30 or z_level == 40 or z_level == 50:
+            if False:
+                points__ = vtk.vtkPoints()
+                for point_frame in registered_spline:
+                    #point_frame[2] -= 0.8
+                    points__.InsertNextPoint(point_frame)
+
+                polydata = vtk.vtkPolyData()
+                polydata.SetPoints(points__)
+
+                # Create a sphere for the points
+                sphere_source = vtk.vtkSphereSource()
+                sphere_source.SetRadius(0.05)  # Set the radius of the sphere
+                sphere_source.SetThetaResolution(10)
+                sphere_source.SetPhiResolution(10)
+
+                # Create a glyph filter to associate the sphere with each point
+                glyph = vtk.vtkGlyph3D()
+                glyph.SetInputData(polydata)
+                glyph.SetSourceConnection(sphere_source.GetOutputPort())
+                glyph.SetScaleModeToScaleByScalar()
+                glyph.SetScaleFactor(1.0)  # Set the scale factor for the spheres
+
+                # Create a mapper for the polydata
+                mapper = vtk.vtkPolyDataMapper()
+                mapper.SetInputConnection(glyph.GetOutputPort())
+
+                # Create a VTK actor for the polydata
+                actor_centerline = vtk.vtkActor()
+                actor_centerline.SetMapper(mapper)
+                actor_centerline.GetProperty().SetColor(1.0, 0.0, 0.0)  # Set color to red
+
+                # Add the actor to the renderer
+                renderer.AddActor(actor_centerline)
+            if np.round(z_visual, 1) == 0.4 or np.round(z_visual, 1) == 20 or np.round(z_visual, 1) == 39.8:
                 with Image.open(input_file_pullback) as im_pullback:
                     # centerline_point = center_line[idx_start - page_pullback]
-
+                    registered_spline_plot = registered_spline
+                    unregistered_spline_plot = np.array(frame_points)
                     # Image to be loaded
-                    page_pullback = round((57 - z_level)/0.2) + 4
-                    page_pullback = 6
-
-                    indices = np.where(my_image_points[:, :, 2] == page_pullback)
-                    mypoints = np.array([my_image_points[i, j] for i, j in zip(indices[0], indices[1])])
+                    page_pullback = round(z_visual / 0.2) + 4
+                    print(page_pullback)
+                    print(z_visual)
+                    indices = np.where(np.isclose(my_image_points[:, 2], page_pullback))
+                    mypoints = my_image_points[indices]
                     mypoints[:,2] = z_visual
-                    itr = page_pullback - 4 
+                    itr = page_pullback
                     im_pullback.seek(page_pullback)  # Move to the current page (frame)
                     image_pullback = np.array(im_pullback.convert('RGB'))  # Convert PIL image to NumPy array
-                    image_pullback = image_pullback[:, :, ::-1].copy()  # Crop image at xxx pixels from top
+                    crop = 157
+                    image_pullback = image_pullback[crop:, :, ::-1].copy()  # Crop image at xxx pixels from top
 
                     gray_image = cv2.cvtColor(image_pullback, cv2.COLOR_BGR2GRAY)
 
@@ -430,23 +481,16 @@ class center_line_registration:
                     colors.SetNumberOfComponents(3)  # RGB has three components
                     colors.SetName("Colors")
 
-                    rot_angle_co_reg = self.parse_rot_angle_co_reg("C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/workflow_processed_data_output/image_translations/rotation_angel_registration.txt")
-                    data_alignement = self.parse_alignement("C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/workflow_processed_data_output/image_translations/alignement_translations.txt")
-                    rotation_matrix_co_regist = np.array([[np.cos(rot_angle_co_reg[0]), -np.sin(rot_angle_co_reg[0]), 0.0],
-                                                [np.sin(rot_angle_co_reg[0]), np.cos(rot_angle_co_reg[0]), 0.0],
-                                                [0.0, 0.0, 1.0]])
-                    rotation_matrix_alignement = np.array([[np.cos(data_alignement[itr][2]), -np.sin(data_alignement[itr][2]), 0.0],
-                                    [np.sin(data_alignement[itr][2]), np.cos(data_alignement[itr][2]), 0.0],
-                                    [0.0, 0.0, 1.0]])
-                    translation_vector_alignment = np.array([data_alignement[itr][0]/scaling, data_alignement[itr][1]/scaling, 0.0])
-                    
-
                     rotated_points = np.dot(rotation_matrix, mypoints.T).T  # Apply rotation
                     rotated_points += translation_vector
+
+                    # remove this
+                    #rotated_points = mypoints
 
                     for i in range(height):
                         for j in range(width):
                             points.InsertNextPoint(rotated_points[i * width + j])
+                            #points.InsertNextPoint(rotated_points[(height - i - 1) * width + (width - j - 1)])
                             rgb_values = image_pullback[i, j]
                             colors.InsertNextTuple3(rgb_values[2], rgb_values[1], rgb_values[0])
 
@@ -468,17 +512,9 @@ class center_line_registration:
                     # Add the actor to the renderer
                     renderer.AddActor(actor)
 
-                    my_points_2 = []
-                    for i in range(gray_image.shape[0]):
-                        for j in range(gray_image.shape[1]):
-                            single_point = np.array([(j - width / 2)/scaling, (i - height / 2)/scaling, z_visual+1])
-                            my_points_2.append(single_point)
-                    
-                    rotated_points_2 = np.dot(rotation_matrix, np.array(my_points_2).T).T  # Apply rotation
-                    rotated_points_2 += translation_vector
                     for i in range(height):
                         for j in range(width):
-                            points_2.InsertNextPoint(rotated_points_2[i * width + j])
+                            points_2.InsertNextPoint(rotated_points[i * width + j])
                             rgb_values = image_pullback[i, j]
                             colors_2.InsertNextTuple3(rgb_values[2], rgb_values[1], rgb_values[0])
 
@@ -498,8 +534,41 @@ class center_line_registration:
                     actor_2.SetMapper(mapper_2)
 
                     # Add the actor to the renderer
-                    renderer.AddActor(actor_2)
-            
+                    #renderer.AddActor(actor_2)
+
+                    
+                    points__ = vtk.vtkPoints()
+                    for point_frame in registered_spline_plot:
+                        #point_frame[2] -= 0.8
+                        points__.InsertNextPoint(point_frame)
+
+                    polydata = vtk.vtkPolyData()
+                    polydata.SetPoints(points__)
+
+                    # Create a sphere for the points
+                    sphere_source = vtk.vtkSphereSource()
+                    sphere_source.SetRadius(0.05)  # Set the radius of the sphere
+                    sphere_source.SetThetaResolution(10)
+                    sphere_source.SetPhiResolution(10)
+
+                    # Create a glyph filter to associate the sphere with each point
+                    glyph = vtk.vtkGlyph3D()
+                    glyph.SetInputData(polydata)
+                    glyph.SetSourceConnection(sphere_source.GetOutputPort())
+                    glyph.SetScaleModeToScaleByScalar()
+                    glyph.SetScaleFactor(1.0)  # Set the scale factor for the spheres
+
+                    # Create a mapper for the polydata
+                    mapper = vtk.vtkPolyDataMapper()
+                    mapper.SetInputConnection(glyph.GetOutputPort())
+
+                    # Create a VTK actor for the polydata
+                    actor_centerline = vtk.vtkActor()
+                    actor_centerline.SetMapper(mapper)
+                    actor_centerline.GetProperty().SetColor(1.0, 0.0, 0.0)  # Set color to red
+
+                    # Add the actor to the renderer
+                    renderer.AddActor(actor_centerline)
             ####################################################################################
 
             # Append the registered spline to the list
@@ -533,12 +602,45 @@ class center_line_registration:
 
         #############################################################################
         points__ = vtk.vtkPoints()
-
-        for point_frame in registered_spline:
+        for point_frame in registered_spline_plot:
+            #point_frame[2] -= 0.8
             points__.InsertNextPoint(point_frame)
 
         polydata = vtk.vtkPolyData()
         polydata.SetPoints(points__)
+
+        # Create a sphere for the points
+        sphere_source = vtk.vtkSphereSource()
+        sphere_source.SetRadius(0.05)  # Set the radius of the sphere
+        sphere_source.SetThetaResolution(10)
+        sphere_source.SetPhiResolution(10)
+
+        # Create a glyph filter to associate the sphere with each point
+        glyph = vtk.vtkGlyph3D()
+        glyph.SetInputData(polydata)
+        glyph.SetSourceConnection(sphere_source.GetOutputPort())
+        glyph.SetScaleModeToScaleByScalar()
+        glyph.SetScaleFactor(1.0)  # Set the scale factor for the spheres
+
+        # Create a mapper for the polydata
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(glyph.GetOutputPort())
+
+        # Create a VTK actor for the polydata
+        actor_centerline = vtk.vtkActor()
+        actor_centerline.SetMapper(mapper)
+        actor_centerline.GetProperty().SetColor(1.0, 0.0, 0.0)  # Set color to red
+
+        # Add the actor to the renderer
+        renderer.AddActor(actor_centerline)
+        
+        # Registration point CT
+        points_ct_reg = vtk.vtkPoints()
+
+        points_ct_reg.InsertNextPoint(np.array([59.3001, -207.2873, 1733.9572]))
+
+        polydata = vtk.vtkPolyData()
+        polydata.SetPoints(points_ct_reg)
 
         # Create a sphere for the points
         sphere_source = vtk.vtkSphereSource()
@@ -563,8 +665,7 @@ class center_line_registration:
         actor_centerline.GetProperty().SetColor(1.0, 0.0, 0.0)  # Set color to red
 
         # Add the actor to the renderer
-        #renderer.AddActor(actor_centerline)
-
+        renderer.AddActor(actor_centerline)
         # CALC
         # Create a VTK actor for the structured grid
         actor_calc = vtk.vtkActor()
@@ -589,7 +690,7 @@ class center_line_registration:
         obj_actor_calc.GetProperty().SetColor([1.0, 0, 0])  # Set color to light blue
 
         # Add the actor for the .obj file to the renderer
-        renderer.AddActor(obj_actor_calc)
+        #renderer.AddActor(obj_actor_calc)
 
         #Outershell
         # Create a VTK actor for the structured grid
@@ -615,7 +716,7 @@ class center_line_registration:
         obj_actor_outershell.GetProperty().SetColor([0, 0, 1.0])  # Set color to light blue
 
         # Add the actor for the .obj file to the renderer
-        renderer.AddActor(obj_actor_outershell)
+        #renderer.AddActor(obj_actor_outershell)
 
         # Innershell
         # Create a VTK actor for the structured grid
@@ -626,7 +727,7 @@ class center_line_registration:
         renderer.AddActor(actor_innershell)
 
         # Load and display the .obj file
-        obj_file_path = 'C:/Users/JL/NX_parts/ArCoMo3_3d_innershell.obj'
+        obj_file_path = 'workflow_processed_data_output/ArCoMo3_newmeshed.obj'
         reader = vtk.vtkOBJReader()
         reader.SetFileName(obj_file_path)
 
