@@ -455,15 +455,17 @@ class center_line_registration:
                     mypoints[:,2] = z_visual
                     itr = page_pullback
                     im_pullback.seek(page_pullback)  # Move to the current page (frame)
-                    image_pullback = np.array(im_pullback.convert('RGB'))  # Convert PIL image to NumPy array
+                    image = np.array(im_pullback.convert('RGB'))  # Convert PIL image to NumPy array
                     crop = 157
-                    image_pullback = image_pullback[crop:, :, ::-1].copy()  # Crop image at xxx pixels from top
+                    image_flipped = np.flipud(image)
+                    height, width, channels = image_flipped.shape
+                    image_pullback = image_flipped[0: height-crop, :, ::-1].copy()
 
                     gray_image = cv2.cvtColor(image_pullback, cv2.COLOR_BGR2GRAY)
 
                     # Get image dimensions
                     height, width = gray_image.shape
-                    scaling = 98
+                    scaling = 103
 
                     # Create a VTK structured grid
                     structured_grid = vtk.vtkStructuredGrid()
@@ -515,7 +517,7 @@ class center_line_registration:
                     for i in range(height):
                         for j in range(width):
                             points_2.InsertNextPoint(rotated_points[i * width + j])
-                            rgb_values = image_pullback[i, j]
+                            rgb_values = image_pullback[i,j]
                             colors_2.InsertNextTuple3(rgb_values[2], rgb_values[1], rgb_values[0])
 
                     # Set the points and scalars for the structured grid
@@ -603,7 +605,6 @@ class center_line_registration:
         #############################################################################
         points__ = vtk.vtkPoints()
         for point_frame in registered_spline_plot:
-            #point_frame[2] -= 0.8
             points__.InsertNextPoint(point_frame)
 
         polydata = vtk.vtkPolyData()
@@ -690,7 +691,7 @@ class center_line_registration:
         obj_actor_calc.GetProperty().SetColor([1.0, 0, 0])  # Set color to light blue
 
         # Add the actor for the .obj file to the renderer
-        #renderer.AddActor(obj_actor_calc)
+        renderer.AddActor(obj_actor_calc)
 
         #Outershell
         # Create a VTK actor for the structured grid
@@ -727,7 +728,7 @@ class center_line_registration:
         renderer.AddActor(actor_innershell)
 
         # Load and display the .obj file
-        obj_file_path = 'workflow_processed_data_output/ArCoMo3_newmeshed.obj'
+        obj_file_path = 'workflow_processed_data_output/ArCoMo3_innershell.obj'
         reader = vtk.vtkOBJReader()
         reader.SetFileName(obj_file_path)
 

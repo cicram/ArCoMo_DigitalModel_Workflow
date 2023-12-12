@@ -2,6 +2,7 @@ from workflow_OCT_lumen_extraction_visualization import oct_lumen_extraction
 from workflow_center_line_registration_visualization import center_line_registration
 from workflow_visual_pointcloud_editing_VTK_point_visualization import point_cloud_visual_editing
 from workflow_center_line_smooting_gui_visualization import PointCloudSmoothingVisualizer
+from workflow_center_line_registration_point_selection_GUI_visualization import PointCloudRegistrationPointSelectionVisualizer
 import open3d as o3d
 
 
@@ -38,8 +39,8 @@ if __name__ == "__main__":
     # Image crop-off
     crop = 157 #157 for view 10mm #130 for view 7mm  # pixels
 
-    # Define the conversion factor: 1 millimeter = 98 pixels
-    conversion_factor = 1 / 98.0
+    # Define the conversion factor: 1 millimeter = 102 pixels
+    conversion_factor = 1 / 103.0
 
     # Input file paths
     input_file_OCT = 'workflow_data/OCT.tif'
@@ -53,7 +54,7 @@ if __name__ == "__main__":
     save_images_for_controll = False 
 
     # Extract oct lumen contour and align them
-    if False:
+    if True:
         oct_lumen_extractor = oct_lumen_extraction()
         OCT_registration_frame = oct_lumen_extractor.find_registration_frame(letter_x_mask_path, input_file_OCT, crop, color1, color2, display_results)
         registration_point = oct_lumen_extractor.get_registration_point(color1, color2, input_file_OCT, crop, OCT_registration_frame, display_results, z_distance, save_file, conversion_factor)
@@ -89,14 +90,14 @@ if __name__ == "__main__":
     registration_point_OCT = center_line_registrator.parse_registration_point_OCT("workflow_processed_data_output/aligned_OCT_registration_point.txt")
 
     # Adapt z value
-    centerline_registration_start = center_line_registrator.find_closest_point_index(resampled_pc_centerline, registration_point_CT)
-    print(centerline_registration_start)
-    # REMOVE !!!!!!!!!!!!!!!!!
-    OCT_registration_frame = 203
+    centerline_registration_point_selector = PointCloudRegistrationPointSelectionVisualizer(resampled_pc_centerline, registration_point_CT)
+    centerline_registration_start = centerline_registration_point_selector.selected_point_index
 
-    if False:
-        OCT_registration_frame = 203
-        centerline_registration_start = 710
+    print(centerline_registration_start)
+
+    # REMOVE !!!!!!!!!!!!!!!!!
+
+    OCT_registration_frame = 203
     oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_CT, OCT_registration_frame, z_distance, display_results)
 
     # rotate OCT_frames

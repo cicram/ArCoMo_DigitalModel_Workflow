@@ -162,3 +162,4 @@ cython_debug/
 # Ignore .tif files
 
 *.tif
+*/my_aligned_points.txt

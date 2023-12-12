@@ -11,6 +11,9 @@ from scipy.ndimage import rotate
 from PIL import Image
 
 class oct_lumen_extraction:
+    def __init__(self):
+        self.oct_registration_point_x = 0
+        self.oct_registration_point_y = 0
 
     # Function to filter by RGB color
     def filter_color(self, input_image, color1, color2):
@@ -71,7 +74,7 @@ class oct_lumen_extraction:
 
         return np.linalg.norm(a - b, ord=2)
 
-
+    # Estimate rotation and translations
     def point_based_matching(self, point_pairs):
         """
         This function is based on the paper "Robot Pose Estimation in Unknown Environments by Matching 2D Range Scans"
@@ -157,7 +160,7 @@ class oct_lumen_extraction:
             points = points[:, :3]
             #plt.plot(points[:, 0], points[:, 1], 'o')
             #plt.show()
-
+        all_points = []
         registration_point_ = registration_point[0:2]
         transformation_history = []
         iteration_array = []
@@ -243,6 +246,7 @@ class oct_lumen_extraction:
 
             # update 'points' for the next iteration
             points = aligned_points
+            all_points.append(np.copy(points))
             registration_point_ = updated_registration_point
             my_points_ = my_points
             # update transformation history
@@ -273,38 +277,49 @@ class oct_lumen_extraction:
             if (abs(closest_rot_angle) < convergence_rotation_threshold) \
                     and (abs(closest_translation_x) < convergence_translation_threshold) \
                     and (abs(closest_translation_y) < convergence_translation_threshold):
-
+                # Plotting outside the loop
+                for i, points in enumerate(all_points):
+                    plt.plot(reference_points[:,0], reference_points[:,1], color="green")
+                    plt.plot(points[:, 0], points[:, 1], color="blue")
+                    plt.title(f'Iteration: {i + 1}')
+                    plt.xlabel('X-axis')
+                    plt.ylabel('Y-axis')
+                    plt.show(block=False)
+                    plt.pause(1)
+                     # Clear the current figure to remove the previous points
+                    plt.clf()
+                plt.show()
                 if verbose:
                     print('Converged!')
                 if display_images:
                     plt.figure(figsize=(12, 4))
-                    plt.subplot(141)
-                    plt.plot(iteration_array, distance_between_points)
+                    #plt.subplot(131)
+                    #plt.plot(iteration_array, distance_between_points)
                     #plt.plot(iteration_array[break_idx], distance_between_points[break_idx], "x")
-                    plt.xlabel("Iteration")
-                    plt.ylabel("Distance")
-                    plt.title("Distance vs. Iteration")
+                    #plt.xlabel("Iteration")
+                    #plt.ylabel("Distance")
+                    #plt.title("Distance vs. Iteration")
 
-                    plt.subplot(142)
+                    plt.subplot(131)
                     plt.plot(iteration_array, rotation_degrees)
                     #plt.plot(iteration_array[break_idx], rotation_degrees[break_idx], "x")
                     plt.xlabel("Iteration")
-                    plt.ylabel("Rotation (degrees)")
+                    plt.ylabel("Rotation (rad)")
                     plt.title("Rotation vs. Iteration")
 
-                    plt.subplot(143)
+                    plt.subplot(132)
                     plt.plot(iteration_array, translation_x_mm)
                     #plt.plot(iteration_array[break_idx], translation_mm[break_idx], "x")
                     plt.xlabel("Iteration")
-                    plt.ylabel("Translation x (mm)")
+                    plt.ylabel("Translation x (pixel)")
                     plt.title("Translation x vs. Iteration")
 
-                    plt.subplot(144)
+                    plt.subplot(133)
                     plt.plot(iteration_array, translation_y_mm)
                     #plt.plot(iteration_array[break_idx], translation_mm[break_idx], "x")
                     plt.xlabel("Iteration")
-                    plt.ylabel("Translation x (mm)")
-                    plt.title("Translation x vs. Iteration")
+                    plt.ylabel("Translation y (pixel)")
+                    plt.title("Translation y vs. Iteration")
 
                     plt.tight_layout()
                     plt.show()
@@ -438,7 +453,6 @@ class oct_lumen_extraction:
             plt.plot(x1, y1, 'r')
             plt.plot(x2, y2, 'b')
             plt.title('Fitted Spline')
-            plt.gca().invert_yaxis()  # Invert the y-axis to match typical image coordinates.
             plt.gca().set_aspect('equal', adjustable='box')  # Ensure equal aspect ratio.
             plt.show()
         
@@ -457,7 +471,6 @@ class oct_lumen_extraction:
             plt.plot(x1, y1, 'r')
             plt.plot(x2, y2, 'b')
             plt.title('Fitted Spline')
-            plt.gca().invert_yaxis()  # Invert the y-axis to match typical image coordinates.
             plt.gca().set_aspect('equal', adjustable='box')  # Ensure equal aspect ratio.
             # Specify the file path and name for the saved PNG image
             output_directory = "controll_contour_images"
@@ -494,15 +507,20 @@ class oct_lumen_extraction:
                 print(page)
                 im.seek(page)  # Move to the current page (frame)
                 image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
-                image_croped = image[crop:, :, ::-1].copy()
+                image_flipped = np.flipud(image)
+                height, width, channels = image_flipped.shape
+                image_croped = image_flipped[0: height-crop, :, ::-1].copy()
                 gray_image = cv2.cvtColor(image_croped, cv2.COLOR_BGR2GRAY)
 
                 # Plot the grayscale image
                 if False:
-                    plt.imshow(gray_image, cmap='gray')
-                    plt.title('Grayscale Image')
+                    plt.imshow(image_flipped)
+                    plt.title('Orig Image')
                     plt.show()
-                open_cv_image = image[crop:, :, ::-1].copy()  # Crop image at xxx pixels from top
+                    plt.imshow(image_croped)
+                    plt.title('Flipped Image')
+                    plt.show()
+                open_cv_image = image_flipped[0: height-crop, :, ::-1].copy()  # Crop image at xxx pixels from top
 
                 # Apply the color filter
                 binary_mask = self.filter_color(open_cv_image, color1, color2)
@@ -644,29 +662,30 @@ class oct_lumen_extraction:
                     my_aligned_images.append(aligned_image_points_shifted)
 
                     ##############################################################
-                    fig = plt.figure()
-                    ax = fig.add_subplot(111, projection='3d')
-                    # Show the plot
-                    x_filtered = []
-                    y_filtered = []
-                    z_filtered = []
-                    for frame_points in aligned_image_points_shifted:
-                        x_filtered.append(frame_points[0])
-                        y_filtered.append(frame_points[1])
-                        z_filtered.append(z_coordinate)
-                    ax.scatter(x_filtered[::120], y_filtered[::120], z_filtered[::120], c="blue", marker='o')
-                    x_filtered = []
-                    y_filtered = []
-                    z_filtered = []
-                    for frame_points in aligned_source_points_shifted:
-                            x_filtered.append(frame_points[0]/scaling)
-                            y_filtered.append(frame_points[1]/scaling)
+                    if False:
+                        fig = plt.figure()
+                        ax = fig.add_subplot(111, projection='3d')
+                        # Show the plot
+                        x_filtered = []
+                        y_filtered = []
+                        z_filtered = []
+                        for frame_points in aligned_image_points_shifted:
+                            x_filtered.append(frame_points[0])
+                            y_filtered.append(frame_points[1])
                             z_filtered.append(z_coordinate)
-                    ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
-                    ax.set_xlabel('Px')
-                    ax.set_ylabel('Py')
-                    ax.set_zlabel('Pz')
-                    #plt.show()
+                        ax.scatter(x_filtered[::120], y_filtered[::120], z_filtered[::120], c="blue", marker='o')
+                        x_filtered = []
+                        y_filtered = []
+                        z_filtered = []
+                        for frame_points in aligned_source_points_shifted:
+                                x_filtered.append(frame_points[0]/scaling)
+                                y_filtered.append(frame_points[1]/scaling)
+                                z_filtered.append(z_coordinate)
+                        ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
+                        ax.set_xlabel('Px')
+                        ax.set_ylabel('Py')
+                        ax.set_zlabel('Pz')
+                        #plt.show()
 
                     ##############################################################
                 z_coordinate += z_offset  # Increment z-coordinate
@@ -715,9 +734,37 @@ class oct_lumen_extraction:
 
         return binary_mask_retained, (center_x, center_y)
 
-
+    # Function to handle mouse clicks
+    def mouse_callback(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            print(f'Registration point selected at (x={x}, y={y})')
+            self.oct_registration_point_x = x
+            self.oct_registration_point_y = y
+             # Close the OpenCV window
+            cv2.destroyAllWindows()
 
     def get_registration_point(self, color1, color2, input_file, crop, carina_point_frame, display_images, z_offset, save_file, conversion_factor):
+        with Image.open(input_file) as im:
+            im.seek(carina_point_frame)  # Move to marked page (frame)
+            image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
+            image_flipped = np.flipud(image)
+            height, width, channels = image_flipped.shape
+            open_cv_image = image_flipped[0: height-crop, :, ::-1].copy()
+
+            # Display the cropped image
+            cv2.imshow('Select registration point (left mouse click)', open_cv_image)            
+
+            # Set the mouse callback function
+            cv2.setMouseCallback('Select registration point (left mouse click)', self.mouse_callback)
+            # Wait for the user to click on the image
+            cv2.waitKey()
+
+        # Convert into mm unit
+        registration_point = [self.oct_registration_point_x, self.oct_registration_point_y, carina_point_frame*z_offset]
+        print(registration_point)
+        return np.array(registration_point)
+    
+    def get_registration_point_old(self, color1, color2, input_file, crop, carina_point_frame, display_images, z_offset, save_file, conversion_factor):
         with Image.open(input_file) as im:
             im.seek(carina_point_frame)  # Move to marked page (frame)
             image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
