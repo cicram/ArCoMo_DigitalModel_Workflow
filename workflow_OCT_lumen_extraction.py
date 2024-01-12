@@ -7,9 +7,13 @@ import os
 import math
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-
+from scipy.ndimage import rotate
+from PIL import Image
 
 class oct_lumen_extraction:
+    def __init__(self):
+        self.oct_registration_point_x = 0
+        self.oct_registration_point_y = 0
 
     # Function to filter by RGB color
     def filter_color(self, input_image, color1, color2):
@@ -58,19 +62,7 @@ class oct_lumen_extraction:
         return transformation_matrix
 
 
-    def euclidean_distance(self, point1, point2):
-        """
-        Euclidean distance between two points.
-        :param point1: the first point as a tuple (a_1, a_2, ..., a_n)
-        :param point2: the second point as a tuple (b_1, b_2, ..., b_n)
-        :return: the Euclidean distance
-        """
-        a = np.array(point1)
-        b = np.array(point2)
-
-        return np.linalg.norm(a - b, ord=2)
-
-
+    # Estimate rotation and translations
     def point_based_matching(self, point_pairs):
         """
         This function is based on the paper "Robot Pose Estimation in Unknown Environments by Matching 2D Range Scans"
@@ -123,7 +115,7 @@ class oct_lumen_extraction:
         return rot_angle, translation_x, translation_y
 
 
-    def icp_alignment(self, first_contour, points, reference_points, transformation_matrix_previous, display_images, registration_point, max_iterations=100, distance_threshold=100, convergence_translation_threshold=1e-3,
+    def icp_alignment(self, first_contour, points, reference_points, transformation_matrix_previous, display_images, registration_point, image, page, z_coordinate, total_rotation_degrees_previous, max_iterations=100, distance_threshold=100, convergence_translation_threshold=1e-3,
             convergence_rotation_threshold=1e-4, point_pairs_threshold=10, verbose=False):
         """
         An implementation of the Iterative Closest Point algorithm that matches a set of M 2D points to another set
@@ -143,7 +135,7 @@ class oct_lumen_extraction:
                 transformation in each iteration in the format [R | T] and the aligned points as a numpy array M x 2
         """
         # Rough initial alignment
-        if transformation_matrix_previous is not None:
+        if transformation_matrix_previous is not None and False:
             # Pad the 3D point cloud with a column of 1's.
             points = np.array(points)
             #plt.plot(points[:, 0], points[:, 1], "x")
@@ -156,21 +148,24 @@ class oct_lumen_extraction:
             points = points[:, :3]
             #plt.plot(points[:, 0], points[:, 1], 'o')
             #plt.show()
-
+        max_rotation_flag = False
+        all_points = []
         registration_point_ = registration_point[0:2]
         transformation_history = []
         iteration_array = []
         translation_x_mm = []
         translation_y_mm = []
         distance_between_points = []
-
+        scaling = 98
+        total_rotation_degrees = 0
         total_trans_x = 0
         total_trans_y = 0
         rotation_degrees = []
         final_rotation = np.array([[ 1, 0], [ 0,  1]])
         source_points_orig = np.copy(points)
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(reference_points)
-
+        image_orig = np.copy(image)
+        
         for iter_num in range(max_iterations):
             if verbose:
                 print('------ iteration', iter_num, '------')
@@ -196,11 +191,21 @@ class oct_lumen_extraction:
                 if verbose:
                     print('Rotation:', math.degrees(closest_rot_angle), 'degrees')
                     print('Translation:', closest_translation_x, closest_translation_y)
+            
+            # Check if the total rotation exceeds the allowed range
+            if total_rotation_degrees + math.degrees(closest_rot_angle) < total_rotation_degrees_previous - 20 or total_rotation_degrees + math.degrees(closest_rot_angle) > total_rotation_degrees_previous + 20:
+                print('Total rotation exceeds the allowed range. Stopping iterations.')
+                print("Total rotation:" + str(total_rotation_degrees))
+                if False:
+                    max_rotation_flag = True
+                    total_rotation_degrees = total_rotation_degrees_previous
+                    break
+            
             if closest_rot_angle is None or closest_translation_x is None or closest_translation_y is None:
                 if verbose:
                     print('No better solution can be found!')
                 break
-
+            
             # transform 'points' (using the calculated rotation and translation)
             c, s = math.cos(closest_rot_angle), math.sin(closest_rot_angle)
             rot = np.array([[c, -s],
@@ -213,8 +218,22 @@ class oct_lumen_extraction:
             updated_registration_point[0] += closest_translation_x
             updated_registration_point[1] += closest_translation_y
 
+            if False:
+                # Image transposition
+                # Rotate the image using scipy.ndimage.rotate
+                rotated_image = rotate(image, np.degrees(closest_rot_angle), reshape=True)
+                # Translate the image using NumPy array operations
+                #translated_image = np.roll(rotated_image, (closest_translation_x, closest_translation_y), axis=(0, 1))
+                
+                #Image.fromarray(translated_image).show(title='Translated Image')
+                image = rotated_image
+                                 # Display the original and rotated image
+                Image.fromarray(image_orig).show(title='Original Image')
+                Image.fromarray(rotated_image).show(title='Rotated Image')
+
             # update 'points' for the next iteration
             points = aligned_points
+            all_points.append(np.copy(points))
             registration_point_ = updated_registration_point
             # update transformation history
             transformation_history.append(np.hstack((rot, np.array([[closest_translation_x], [closest_translation_y]]))))
@@ -222,6 +241,7 @@ class oct_lumen_extraction:
             final_rotation = np.dot(final_rotation, rot)
             total_trans_x += closest_translation_x
             total_trans_y += closest_translation_y
+            total_rotation_degrees += np.degrees(closest_rot_angle)
 
             # Compute distance between points
             distance_between_points.append(np.mean(distances))
@@ -243,45 +263,64 @@ class oct_lumen_extraction:
             if (abs(closest_rot_angle) < convergence_rotation_threshold) \
                     and (abs(closest_translation_x) < convergence_translation_threshold) \
                     and (abs(closest_translation_y) < convergence_translation_threshold):
+                if False:
+                    # Plotting outside the loop
+                    for i, points in enumerate(all_points):
+                        plt.plot(reference_points[:,0], reference_points[:,1], color="green")
+                        plt.plot(points[:, 0], points[:, 1], color="blue")
+                        plt.title(f'Iteration: {i + 1}')
+                        plt.xlabel('X-axis')
+                        plt.ylabel('Y-axis')
+                        plt.show(block=False)
+                        plt.pause(1)
+                        # Clear the current figure to remove the previous points
+                        plt.clf()
+                    plt.show()
                 if verbose:
                     print('Converged!')
                 if display_images:
                     plt.figure(figsize=(12, 4))
-                    plt.subplot(141)
-                    plt.plot(iteration_array, distance_between_points)
+                    #plt.subplot(131)
+                    #plt.plot(iteration_array, distance_between_points)
                     #plt.plot(iteration_array[break_idx], distance_between_points[break_idx], "x")
-                    plt.xlabel("Iteration")
-                    plt.ylabel("Distance")
-                    plt.title("Distance vs. Iteration")
+                    #plt.xlabel("Iteration")
+                    #plt.ylabel("Distance")
+                    #plt.title("Distance vs. Iteration")
 
-                    plt.subplot(142)
+                    plt.subplot(131)
                     plt.plot(iteration_array, rotation_degrees)
                     #plt.plot(iteration_array[break_idx], rotation_degrees[break_idx], "x")
                     plt.xlabel("Iteration")
-                    plt.ylabel("Rotation (degrees)")
+                    plt.ylabel("Rotation (rad)")
                     plt.title("Rotation vs. Iteration")
 
-                    plt.subplot(143)
+                    plt.subplot(132)
                     plt.plot(iteration_array, translation_x_mm)
                     #plt.plot(iteration_array[break_idx], translation_mm[break_idx], "x")
                     plt.xlabel("Iteration")
-                    plt.ylabel("Translation x (mm)")
+                    plt.ylabel("Translation x (pixel)")
                     plt.title("Translation x vs. Iteration")
 
-                    plt.subplot(144)
+                    plt.subplot(133)
                     plt.plot(iteration_array, translation_y_mm)
                     #plt.plot(iteration_array[break_idx], translation_mm[break_idx], "x")
                     plt.xlabel("Iteration")
-                    plt.ylabel("Translation x (mm)")
-                    plt.title("Translation x vs. Iteration")
+                    plt.ylabel("Translation y (pixel)")
+                    plt.title("Translation y vs. Iteration")
 
                     plt.tight_layout()
                     plt.show()
                 # Stop the ICP process
                 break
-            
+        
+        print("Total rotation:" + str(total_rotation_degrees))
         transformation_matrix = self.compute_transformation_matrix(source_points_orig, points)
-        return points, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point
+        if True:
+            with open("workflow_processed_data_output/image_translations/alignement_translations.txt", 'a') as file:
+                file.write(f"{page} {total_trans_x:.2f} {total_trans_y:.2f} {total_rotation_degrees:.2f}\n")
+        if max_rotation_flag:
+            points = None
+        return points, transformation_matrix, total_rotation_degrees, total_trans_x, total_trans_y, updated_registration_point
 
 
     def find_registration_frame(self, letter_x_mask_path, input_file, crop, color1, color2, display_images):
@@ -396,7 +435,6 @@ class oct_lumen_extraction:
             plt.plot(x1, y1, 'r')
             plt.plot(x2, y2, 'b')
             plt.title('Fitted Spline')
-            plt.gca().invert_yaxis()  # Invert the y-axis to match typical image coordinates.
             plt.gca().set_aspect('equal', adjustable='box')  # Ensure equal aspect ratio.
             plt.show()
         
@@ -415,7 +453,6 @@ class oct_lumen_extraction:
             plt.plot(x1, y1, 'r')
             plt.plot(x2, y2, 'b')
             plt.title('Fitted Spline')
-            plt.gca().invert_yaxis()  # Invert the y-axis to match typical image coordinates.
             plt.gca().set_aspect('equal', adjustable='box')  # Ensure equal aspect ratio.
             # Specify the file path and name for the saved PNG image
             output_directory = "controll_contour_images"
@@ -446,13 +483,16 @@ class oct_lumen_extraction:
         previous_contour = None
         point_cloud = []
         transformation_matrix_previous = None
+        my_aligned_images = []
+        total_rotation_degrees_previous = 0
         with Image.open(input_file) as im:
             for page in range(OCT_start_frame, OCT_end_frame, 1):
                 print(page)
                 im.seek(page)  # Move to the current page (frame)
                 image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
-
-                open_cv_image = image[crop:, :, ::-1].copy()  # Crop image at xxx pixels from top
+                image_flipped = np.flipud(image)
+                height, width, channels = image_flipped.shape
+                open_cv_image = image_flipped[0: height-crop, :, ::-1].copy()  # Crop image at xxx pixels from top
 
                 # Apply the color filter
                 binary_mask = self.filter_color(open_cv_image, color1, color2)
@@ -494,8 +534,7 @@ class oct_lumen_extraction:
                         
                     if previous_contour is not None:
                         # Perform ICP alignment.
-                        aligned_source_spline, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point = self.icp_alignment(first_contour,
-                                                                                                                                                                     current_contour, previous_contour, transformation_matrix_previous, display_images, registration_point)
+                        aligned_source_spline, transformation_matrix, total_rotation_degrees_previous, total_trans_x, total_trans_y, updated_registration_point = self.icp_alignment(first_contour, current_contour, previous_contour, transformation_matrix_previous, display_images, registration_point, image, page, z_coordinate, total_rotation_degrees_previous)
                         
                         # Convert the spline points to NumPy arrays.
                         source_points = np.array(current_contour)
@@ -503,24 +542,10 @@ class oct_lumen_extraction:
                         transformation_matrix_previous = transformation_matrix
                         # Apply transformation also to registration point
                         if page == (carina_point_frame):
-                            if False: # old way
-                                registration_point_2d = registration_point[0:2]
-                                registration_point_transformed = np.dot(registration_point_2d, transformation_matrix)
-                                centroid = np.mean(aligned_source_points, axis=0)
-                                registration_point_transformed[0] = registration_point_transformed[0] - centroid[0] * conversion_factor
-                                registration_point_transformed[1] = registration_point_transformed[1] - centroid[1] * conversion_factor
-
-                                registration_point_transformed = np.copy(registration_point[0:2])
-                                rotated_points = np.dot(registration_point_transformed, final_rotation.T)
-                                transposed_x = rotated_points[0] + total_trans_x * conversion_factor
-                                transposed_y = rotated_points[1] + total_trans_y * conversion_factor         
-                                centroid = np.mean(aligned_source_points, axis=0)
-                                registration_point_transformed[0] = transposed_x - centroid[0] * conversion_factor
-                                registration_point_transformed[1] = transposed_y - centroid[1] * conversion_factor
-
                             centroid = np.mean(aligned_source_points, axis=0)
                             updated_registration_point[0] -= centroid[0]
                             updated_registration_point[1] -= centroid[1]
+                            oct_registration_point = [updated_registration_point[0] * conversion_factor, updated_registration_point[1] * conversion_factor, registration_point[2]]
                             if save_file:
                                 # Write the coordinates to the text file
                                 with open("workflow_processed_data_output/aligned_OCT_registration_point.txt", 'w') as file:
@@ -559,23 +584,28 @@ class oct_lumen_extraction:
                     
                     if page == (carina_point_frame):
                         current_contour = np.array(current_contour)
-                        plt.plot(updated_registration_point[0], updated_registration_point[1], "x")
-                        plt.plot(registration_point[0]- centroid[0] , registration_point[1]- centroid[1], "o")
                         point_cloud_current = np.array(point_cloud_current)
                         aligned_source_points = np.array(aligned_source_points)
-                        plt.plot(aligned_source_points[:, 0] - centroid[0], aligned_source_points[:, 1] - centroid[1], "x")
-                        plt.plot(current_contour[:, 0] - centroid[0], current_contour[:, 1] - centroid[1], "x")
-                        plt.show()
+                        if display_images:
+                            plt.plot(updated_registration_point[0], updated_registration_point[1], "x")
+                            plt.plot(registration_point[0]- centroid[0] , registration_point[1]- centroid[1], "o")
+                            plt.plot(aligned_source_points[:, 0] - centroid[0], aligned_source_points[:, 1] - centroid[1], "x")
+                            plt.plot(current_contour[:, 0] - centroid[0], current_contour[:, 1] - centroid[1], "x")
+                            plt.show()
                     if save_file:
                         # Write the coordinates to the text file
                         with open("workflow_processed_data_output/output_point_cloud.txt", 'a') as file:
                             for coord in point_cloud_current:
                                 file.write(f"{coord[0]:.2f} {coord[1]:.2f} {coord[2]:.2f}\n")
+                                                        
+                    with open("workflow_processed_data_output/image_translations/center_point_shift.txt", 'a') as file:
+                            file.write(f"{centroid[0]:.2f} {centroid[1]:.2f}\n")
 
                     point_cloud.append(point_cloud_current)
                     if first_contour_flag or True:
                         previous_contour = aligned_source_points
                         #first_contour_flag = False
+                    
                 z_coordinate += z_offset  # Increment z-coordinate
 
         x_filtered = []
@@ -596,6 +626,8 @@ class oct_lumen_extraction:
         ax.set_zlabel('Pz')
         plt.show()
 
+        return point_cloud, oct_registration_point
+    
 
     def find_center_of_letter_X(self, binary_mask):
         # Load the binary mask and the letter 'x' mask
@@ -622,25 +654,34 @@ class oct_lumen_extraction:
         return binary_mask_retained, (center_x, center_y)
 
 
+    # Function to handle mouse clicks
+    def mouse_callback(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            print(f'Registration point selected at (x={x}, y={y})')
+            self.oct_registration_point_x = x
+            self.oct_registration_point_y = y
+             # Close the OpenCV window
+            cv2.destroyAllWindows()
+
 
     def get_registration_point(self, color1, color2, input_file, crop, carina_point_frame, display_images, z_offset, save_file, conversion_factor):
         with Image.open(input_file) as im:
             im.seek(carina_point_frame)  # Move to marked page (frame)
             image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
+            image_flipped = np.flipud(image)
+            height, width, channels = image_flipped.shape
+            open_cv_image = image_flipped[0: height-crop, :, ::-1].copy()
 
-            open_cv_image = image[crop:, :, ::-1].copy()  # Crop image at xxx pixels from top
+            # Display the cropped image
+            cv2.imshow('Select registration point (left mouse click)', open_cv_image)            
 
-            # Apply the color filter
-            binary_mask = self.filter_color(open_cv_image, color1, color2)
-            if display_images:
-                self.plt_cv2_images('Color filtered image', binary_mask)
-            
-            # Find the coordinates of the letter X
-            binary_mask_x, position = self.find_center_of_letter_X(binary_mask, )
-            if display_images:
-                self.plt_cv2_images('Color filtered image', binary_mask_x)
-        
+            # Set the mouse callback function
+            cv2.setMouseCallback('Select registration point (left mouse click)', self.mouse_callback)
+            # Wait for the user to click on the image
+            cv2.waitKey()
+
         # Convert into mm unit
-        registration_point = [position[0], position[1], carina_point_frame*z_offset]
+        registration_point = [self.oct_registration_point_x, self.oct_registration_point_y, carina_point_frame*z_offset]
         print(registration_point)
         return np.array(registration_point)
+    

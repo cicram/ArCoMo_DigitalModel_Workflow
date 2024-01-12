@@ -2,8 +2,46 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 from scipy.interpolate import splprep, splev
+import cv2
+import numpy as np
+from PIL import Image
+import vtkmodules.all as vtk
 
-class center_line_registration: 
+class center_line_registration:
+    def parse_alignement(self, file_path):
+        data = []
+        # Open the text file for reading
+        with open(file_path, 'r') as file:
+            for line in file:
+                # Split the line into three values
+                parts = line.strip().split()
+
+                # Ensure there are three values on each line
+                if len(parts) == 4:
+                    # Parse the values as floats and append them to the respective lists
+                    page, trans_x, trans_y, rotation = float(parts[0]), float(parts[1]), float(parts[2]), float(parts[3])
+                    data.append((page, trans_x, trans_y, rotation))
+
+        data = np.array(data)
+        return data
+
+    def parse_rot_angle_co_reg(self, file_path):
+        data = []
+        # Open the text file for reading
+        with open(file_path, 'r') as file:
+            for line in file:
+                # Split the line into three values
+                parts = line.strip().split()
+
+                # Ensure there are three values on each line
+                if len(parts) == 1:
+                    # Parse the values as floats and append them to the respective lists
+                    rotation = float(parts[0])
+                    data.append((rotation))
+
+        data = np.array(data)
+        return data
+
     def parse_registration_point_OCT(self, file_path):
         data = []
         # Open the text file for reading
@@ -180,6 +218,42 @@ class center_line_registration:
             plt.show()
 
         return vectors
+    
+    def restructure_OCT_lumen_point_cloud(self, oct_points):
+        data = []
+        for parts in oct_points:
+            for point in parts:
+                px, py, pz = float(point[0]), float(point[1]), float(point[2])
+                data.append((px, py, pz))
+        # Create a dictionary to store grouped data with z-values as keys
+        centered_grouped_data = {}
+
+        # Iterate through the data and group by z-values
+        for x, y, z in data:
+            if z not in centered_grouped_data:
+                centered_grouped_data[z] = []
+            centered_grouped_data[z].append([x, y, z])
+
+        # Flip the order of the groups by sorting based on z-values
+        sorted_data = sorted(centered_grouped_data.items(), key=lambda item: item[0], reverse=True)
+
+        # Create a new dictionary with updated z-values
+        flipped_grouped_data = {}
+        max_z = sorted_data[0][0]  # Get the maximum z-value
+        for i, (z, group) in enumerate(sorted_data):
+            if i == 0:
+                flipped_grouped_data[0] = group  # Assign the first group to z=0
+            else:
+                flipped_grouped_data[max_z - z] = group
+
+        # Round the z values to one decimal place
+        rounded_grouped_data = {}
+        for z, group in flipped_grouped_data.items():
+            rounded_z = round(z, 1)
+            rounded_grouped_data[rounded_z] = group
+
+        return rounded_grouped_data
+    
 
     def parse_OCT_lumen_point_cloud(self, file_path):
         data = []
@@ -225,9 +299,29 @@ class center_line_registration:
 
 
     def rotation_matrix_from_vectors(self, vec1, vec2):
+        # Calculate the dot product
+        dot_product = np.dot(vec1, vec2)
+
+        # Calculate the magnitudes of the vectors
+        magnitude_vec1 = np.linalg.norm(vec1)
+        magnitude_vec2 = np.linalg.norm(vec2)
+
+        # Calculate the cosine of the angle
+        cos_theta = dot_product / (magnitude_vec1 * magnitude_vec2)
+
+        # Calculate the angle in radians
+        theta_radians = np.arccos(cos_theta)
+
+        # Convert the angle to degrees
+        rot_angle = np.degrees(theta_radians)
+        with open("workflow_processed_data_output/image_translations/rotation_angel_registration.txt", 'w') as file:
+            file.write(f"{rot_angle:.2f}\n")
+        
         # Normalize the input vectors
+
         vec1 = vec1 / np.linalg.norm(vec1)
         vec2 = vec2 / np.linalg.norm(vec2)
+        
 
         if False:
             # Calculate the cross product to find the rotation axis
@@ -260,19 +354,6 @@ class center_line_registration:
         return rotation_matrix
 
 
-    def find_closest_point_index(self, point_cloud, target_point):
-        # Convert the point cloud to a NumPy array for efficient calculations
-        point_cloud_array = np.array(point_cloud)
-
-        # Calculate the Euclidean distances between the target point and all points in the point cloud
-        distances = np.linalg.norm(point_cloud_array - target_point, axis=1)
-
-        # Find the index of the point with the minimum distance
-        closest_point_index = np.argmin(distances)
-
-        return closest_point_index
-
-
     def register_OCT_frames_onto_centerline(self, grouped_OCT_frames, centerline_registration_start, centerline_vectors,
                                             resampled_pc_centerline, OCT_registration_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
         saved_registered_splines = []
@@ -280,15 +361,32 @@ class center_line_registration:
         target_centerline_point_display = []
         orig_frames = []
         z_level_preivous = None
-
+       
         # Find start idx to know at what centerline index they have to be aligned 
         z_level_registration = round(OCT_registration_frame * z_distance, 1)
         count = 0
+        if False:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            # Show the plot
+            x_filtered = []
+            y_filtered = []
+            z_filtered = []
+            for z_level, frame_points in grouped_OCT_frames.items():
+                for i, data in enumerate(frame_points):
+                    x_filtered.append(frame_points[i][0])
+                    y_filtered.append(frame_points[i][1])
+                    z_filtered.append(frame_points[i][2])
+                print("z_level: "+str(z_level))
+                print("z_visual: "+str(frame_points[0][2]))
+
+            ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
+            plt.show()
+
         for z_level, frame_points in grouped_OCT_frames.items():
             if z_level > z_level_registration:
                 count += 1
         closest_centerline_point_idx = centerline_registration_start - count
-
         # Iterate through the splines and align them on the centerline points.
         for z_level, frame_points in grouped_OCT_frames.items():
             # Find the corresponding centerline point and its vector.
@@ -307,7 +405,7 @@ class center_line_registration:
             rotation_matrix = self.rotation_matrix_from_vectors(source_normal_vector, normal_vector)
 
             registered_spline = np.array(frame_points)  # Copy the spline points
-
+            z_visual = frame_points[0][2]
             # Apply the rotation to the entire frame (spline points).
             registered_spline = np.dot(rotation_matrix, registered_spline.T).T  # Apply rotation
 
@@ -318,6 +416,7 @@ class center_line_registration:
             # Append the registered spline to the list
             saved_registered_splines.append(registered_spline)
             rot_vec = np.dot(rotation_matrix, source_normal_vector)
+            
             # Save registration point
             if z_level == z_level_registration:
             # Write the coordinates to the text file
@@ -326,15 +425,24 @@ class center_line_registration:
                     with open("workflow_processed_data_output/rotated_OCT_registration_point.txt", 'w') as file:
                         file.write(f"{rotated_registration_point_OCT[0]:.2f} {rotated_registration_point_OCT[1]:.2f} {rotated_registration_point_OCT[2]:.2f}\n")
 
+            # Save rotation and translation
+            with open("workflow_processed_data_output/image_translations/centerline_registration_rotation.txt", 'a') as file:
+                file.write(f"{rotation_matrix[0][0]:.2f} {rotation_matrix[0][1]:.2f} {rotation_matrix[0][2]:.2f} \
+                           {rotation_matrix[1][0]:.2f} {rotation_matrix[1][1]:.2f} {rotation_matrix[1][2]:.2f} \
+                           {rotation_matrix[2][0]:.2f} {rotation_matrix[2][1]:.2f} {rotation_matrix[1][2]:.2f}\n")
+            center_point = registered_spline.mean(axis=0)
+            with open("workflow_processed_data_output/image_translations/centerline_registration_translation_center.txt", 'a') as file:
+                file.write(f"{center_point[0]:.2f} {center_point[1]:.2f} {center_point[2]:.2f}\n")
 
+            with open("workflow_processed_data_output/image_translations/centerline_registration_translation.txt", 'a') as file:
+                file.write(f"{translation_vector[0]:.2f} {translation_vector[1]:.2f} {translation_vector[2]:.2f}\n")
             frame_points = np.array(frame_points)
             translation_vector = target_centerline_point - frame_points.mean(axis=0)
             orig_frames.append(frame_points + translation_vector)
             rotated_vectors.append(rot_vec)
             target_centerline_point_display.append(target_centerline_point)
 
-        if save_file or True:
-
+        if save_file:
             # Write the data to a text file
             with open("workflow_processed_data_output/saved_registered_splines.txt", "w") as file:
                 for spline in saved_registered_splines:
@@ -355,38 +463,8 @@ class center_line_registration:
             ax.set_zlabel('Z')
             plt.title('Registered Splines')
             plt.show()
-        if display_results and False:
-            fig = plt.figure(figsize=(10, 8))
-            ax = fig.add_subplot(111, projection='3d')
-            i = 0
-            for frame in orig_frames:
-                frame = frame[::10]
-                i += 1
-                if  199 < i < 201:
-                    ax.scatter(frame[:, 0], frame[:, 1], frame[:, 2], color="blue", marker='o')
-            i = 0
-            for spline in saved_registered_splines:
-                spline = spline[::10]
-                i += 1
-                if  199 < i < 201:
-                    ax.scatter(spline[:, 0], spline[:, 1], spline[:, 2], color="red", marker='o')
-            i = 0
-            for vector in rotated_vectors:
-                x, y, z = target_centerline_point_display[i]
-                nx, ny, nz = vector
-                i += 1
-                ax.quiver(x, y, z, nx, ny, nz, length=1.5, normalize=True, color='b')
 
-            for i in range(len(resampled_pc_centerline)):
-                x, y, z = resampled_pc_centerline[i]
-                nx, ny, nz = centerline_vectors[i]
-                ax.quiver(x, y, z, nx, ny, nz, length=1, normalize=True, color='r')
-            # Set labels and legend
-            ax.set_xlabel('X')
-            ax.set_ylabel('Y')
-            ax.set_zlabel('Z')
-            plt.title('Registered Splines for the First 3 Z-Levels')
-            plt.show()
+        return saved_registered_splines
 
 
     def get_oct_lumen_rotation_matrix(self, resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_CT, OCT_registration_frame, z_distance, display_results):
@@ -414,8 +492,6 @@ class center_line_registration:
         rotation_angle = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
 
         # Convert the angle from radians to degrees if needed
-        print(np.degrees(rotation_angle))
-        ########## Verified angle, is correct, now check in 3d plot howmuch the frames are rotated *****************************
         rotated_registration_point = np.dot(rotation_matrix, registration_point_OCT.T).T 
 
         rotated_frame = np.dot(registered_frame, rotation_matrix.T)
@@ -423,7 +499,7 @@ class center_line_registration:
         rotated_frame += translation_vector
         rotated_registration_point += translation_vector
 
-        if display_results or True:
+        if display_results:
             plt.plot(registered_frame[:, 0], registered_frame[:, 1], "x", color="red")
             plt.plot(registration_point_OCT[0], registration_point_OCT[1], "o", color="red")
             plt.plot(rotated_registration_point[0], rotated_registration_point[1], "o", color="blue")
@@ -434,14 +510,14 @@ class center_line_registration:
 
             plt.show()
 
-        plt.plot(target_centerline_point[0], target_centerline_point[1], "o", color="black")
-        plt.plot(registration_point_OCT[0], registration_point_OCT[1], "x", color="blue")
-        plt.plot(registration_point_CT[0], registration_point_CT[1], "x", color="red")
-        plt.plot(rotated_registration_point[0], rotated_registration_point[1], "o", color="blue")
-        plt.plot([target_centerline_point[0], registration_point_OCT[0]],[target_centerline_point[1], registration_point_OCT[1]], color="blue")
-        plt.plot([target_centerline_point[0], registration_point_CT[0]],[target_centerline_point[1], registration_point_CT[1]], color="red")
-        plt.plot([target_centerline_point[0], rotated_registration_point[0]],[target_centerline_point[1], rotated_registration_point[1]], color="blue")
-        plt.show()
+            plt.plot(target_centerline_point[0], target_centerline_point[1], "o", color="black")
+            plt.plot(registration_point_OCT[0], registration_point_OCT[1], "x", color="blue")
+            plt.plot(registration_point_CT[0], registration_point_CT[1], "x", color="red")
+            plt.plot(rotated_registration_point[0], rotated_registration_point[1], "o", color="blue")
+            plt.plot([target_centerline_point[0], registration_point_OCT[0]],[target_centerline_point[1], registration_point_OCT[1]], color="blue")
+            plt.plot([target_centerline_point[0], registration_point_CT[0]],[target_centerline_point[1], registration_point_CT[1]], color="red")
+            plt.plot([target_centerline_point[0], rotated_registration_point[0]],[target_centerline_point[1], rotated_registration_point[1]], color="blue")
+            plt.show()
 
         if display_results:
             print(rotated_registration_point)
@@ -512,7 +588,7 @@ class center_line_registration:
             return R
 
 
-    def rotate_frames(self, grouped_OCT_frames, oct_lumen_rotation_matrix):
+    def rotate_frames(self, grouped_OCT_frames, oct_lumen_rotation_matrix, display_results):
         # Create an empty dictionary to store the rotated data
         rotated_grouped_data = {}
 
@@ -521,34 +597,34 @@ class center_line_registration:
             rotated_group = np.dot(group, oct_lumen_rotation_matrix.T)
             # Store the rotated group in the rotated_grouped_data dictionary
             rotated_grouped_data[z] = rotated_group
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        # Show the plot
-        x_filtered = []
-        y_filtered = []
-        z_filtered = []
-        for z_level, frame_points in grouped_OCT_frames.items():
-            for i, data in enumerate(frame_points):
-                if z_level < 0.1:
-                    x_filtered.append(frame_points[i][0])
-                    y_filtered.append(frame_points[i][1])
-                    z_filtered.append(frame_points[i][2])
-        ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
-        x_filtered = []
-        y_filtered = []
-        z_filtered = []
-        for z_level, frame_points in rotated_grouped_data.items():
-            for i, data in enumerate(frame_points): 
-                if z_level < 0.1:
-                    x_filtered.append(frame_points[i][0])
-                    y_filtered.append(frame_points[i][1])
-                    z_filtered.append(frame_points[i][2])
-        ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
-        ax.set_xlabel('Px')
-        ax.set_ylabel('Py')
-        ax.set_zlabel('Pz')
-        plt.show()
+        if display_results:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            # Show the plot
+            x_filtered = []
+            y_filtered = []
+            z_filtered = []
+            for z_level, frame_points in grouped_OCT_frames.items():
+                for i, data in enumerate(frame_points):
+                    if z_level < 0.1:
+                        x_filtered.append(frame_points[i][0])
+                        y_filtered.append(frame_points[i][1])
+                        z_filtered.append(frame_points[i][2])
+            ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
+            x_filtered = []
+            y_filtered = []
+            z_filtered = []
+            for z_level, frame_points in rotated_grouped_data.items():
+                for i, data in enumerate(frame_points): 
+                    if z_level < 0.1:
+                        x_filtered.append(frame_points[i][0])
+                        y_filtered.append(frame_points[i][1])
+                        z_filtered.append(frame_points[i][2])
+            ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
+            ax.set_xlabel('Px')
+            ax.set_ylabel('Py')
+            ax.set_zlabel('Pz')
+            plt.show()
 
         return rotated_grouped_data
 

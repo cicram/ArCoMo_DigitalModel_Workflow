@@ -1,0 +1,14 @@
+Legend
+======
+
+Point:
+Name:          Name of the point
+X1,Y1,Z1:      Coordinates of the point
+
+Data
+====
+
+Point:
+Name    	X1      	Y1        	Z1        	
+Point 1 	45.6548 	-191.2070 	1941.5283 	
+

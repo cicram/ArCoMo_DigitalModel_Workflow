@@ -259,18 +259,12 @@ class point_cloud_visual_editing:
         # Fuse the two point clouds
         self.fuse_point_clouds()
 
-        # Save the fused point cloud to a text file
-        self.save_point_cloud_to_file("workflow_processed_data_output/fused_point_cloud_with_branch.xyz")
-
-        print("Fused point clouds saved to 'fused_point_cloud.txt'.")
-
         self.render_window.Finalize()  # Finalize the render window
         self.render_window.GetInteractor().TerminateApp() 
 
-    def run_editor(self, file_path_1, file_path_2):
-        self.point_cloud1 = self.parse_lumen_point_cloud(file_path_1)
-        self.point_cloud2 = self.parse_point_cloud_CT_lumen(file_path_2)
-
+    def run_editor(self, ct_points, oct_points):
+        self.point_cloud1 = oct_points
+        self.point_cloud2 = ct_points
         self.actor1 = self.create_point_cloud_actor(self.point_cloud1, [1, 0, 0])
         self.actor2 = self.create_point_cloud_actor(self.point_cloud2, [0, 0, 1])
 

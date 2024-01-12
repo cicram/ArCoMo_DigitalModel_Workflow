@@ -127,7 +127,7 @@ class oct_lumen_extraction:
         return rot_angle, translation_x, translation_y
 
 
-    def icp_alignment(self, first_contour, points, reference_points, transformation_matrix_previous, display_images, registration_point, image, page, gray_image, z_coordinate, max_iterations=100, distance_threshold=100, convergence_translation_threshold=1e-3,
+    def icp_alignment(self, first_contour, points, reference_points, transformation_matrix_previous, display_images, registration_point, image, page, gray_image, z_coordinate, total_rotation_degrees_previous, max_iterations=100, distance_threshold=100, convergence_translation_threshold=1e-3,
             convergence_rotation_threshold=1e-4, point_pairs_threshold=10, verbose=False):
         """
         An implementation of the Iterative Closest Point algorithm that matches a set of M 2D points to another set
@@ -160,6 +160,7 @@ class oct_lumen_extraction:
             points = points[:, :3]
             #plt.plot(points[:, 0], points[:, 1], 'o')
             #plt.show()
+        max_rotation_flag = False
         all_points = []
         registration_point_ = registration_point[0:2]
         transformation_history = []
@@ -183,7 +184,6 @@ class oct_lumen_extraction:
                 single_point = np.array([j/scaling, i/scaling])
                 my_points__.append(single_point)
         my_points_ = np.array(my_points__)
-        print("page: " + str(page) + " icp algo applied")
 
         for iter_num in range(max_iterations):
             if verbose:
@@ -210,11 +210,21 @@ class oct_lumen_extraction:
                 if verbose:
                     print('Rotation:', math.degrees(closest_rot_angle), 'degrees')
                     print('Translation:', closest_translation_x, closest_translation_y)
+            
+            # Check if the total rotation exceeds the allowed range
+            if total_rotation_degrees + math.degrees(closest_rot_angle) < total_rotation_degrees_previous - 20 or total_rotation_degrees + math.degrees(closest_rot_angle) > total_rotation_degrees_previous + 20:
+                print('Total rotation exceeds the allowed range. Stopping iterations.')
+                print("Total rotation:" + str(total_rotation_degrees))
+                if False:
+                    max_rotation_flag = True
+                    total_rotation_degrees = total_rotation_degrees_previous
+                    break
+            
             if closest_rot_angle is None or closest_translation_x is None or closest_translation_y is None:
                 if verbose:
                     print('No better solution can be found!')
                 break
-
+            
             # transform 'points' (using the calculated rotation and translation)
             c, s = math.cos(closest_rot_angle), math.sin(closest_rot_angle)
             rot = np.array([[c, -s],
@@ -277,18 +287,19 @@ class oct_lumen_extraction:
             if (abs(closest_rot_angle) < convergence_rotation_threshold) \
                     and (abs(closest_translation_x) < convergence_translation_threshold) \
                     and (abs(closest_translation_y) < convergence_translation_threshold):
-                # Plotting outside the loop
-                for i, points in enumerate(all_points):
-                    plt.plot(reference_points[:,0], reference_points[:,1], color="green")
-                    plt.plot(points[:, 0], points[:, 1], color="blue")
-                    plt.title(f'Iteration: {i + 1}')
-                    plt.xlabel('X-axis')
-                    plt.ylabel('Y-axis')
-                    plt.show(block=False)
-                    plt.pause(1)
-                     # Clear the current figure to remove the previous points
-                    plt.clf()
-                plt.show()
+                if False:
+                    # Plotting outside the loop
+                    for i, points in enumerate(all_points):
+                        plt.plot(reference_points[:,0], reference_points[:,1], color="green")
+                        plt.plot(points[:, 0], points[:, 1], color="blue")
+                        plt.title(f'Iteration: {i + 1}')
+                        plt.xlabel('X-axis')
+                        plt.ylabel('Y-axis')
+                        plt.show(block=False)
+                        plt.pause(1)
+                        # Clear the current figure to remove the previous points
+                        plt.clf()
+                    plt.show()
                 if verbose:
                     print('Converged!')
                 if display_images:
@@ -325,20 +336,18 @@ class oct_lumen_extraction:
                     plt.show()
                 # Stop the ICP process
                 break
-            
+        
+        print("Total rotation:" + str(total_rotation_degrees))
         transformation_matrix = self.compute_transformation_matrix(source_points_orig, points)
-        with open("workflow_processed_data_output/image_translations/alignement_translations.txt", 'a') as file:
-            file.write(f"{page} {total_trans_x:.2f} {total_trans_y:.2f} {total_rotation_degrees:.2f}\n")
-
-        rotation_matrix_alignement = np.array([[np.cos(total_rotation_degrees), -np.sin(total_rotation_degrees), 0.0],
-                [np.sin(total_rotation_degrees), np.cos(total_rotation_degrees), 0.0],
-                [0.0, 0.0, 1.0]])
-        translation_vector_alignment = np.array([total_trans_x/scaling, total_trans_y/scaling, 0.0])
+        if True:
+            with open("workflow_processed_data_output/image_translations/alignement_translations.txt", 'a') as file:
+                file.write(f"{page} {total_trans_x:.2f} {total_trans_y:.2f} {total_rotation_degrees:.2f}\n")
         my_points_return = []
         for point in my_points:
             my_points_return.append(np.array([point[0], point[1], page]))
-        
-        return points, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point, my_points_return
+        if max_rotation_flag:
+            points = None
+        return points, transformation_matrix, total_rotation_degrees, total_trans_x, total_trans_y, updated_registration_point, my_points_return
 
 
     def find_registration_frame(self, letter_x_mask_path, input_file, crop, color1, color2, display_images):
@@ -502,6 +511,7 @@ class oct_lumen_extraction:
         point_cloud = []
         transformation_matrix_previous = None
         my_aligned_images = []
+        total_rotation_degrees_previous = 0
         with Image.open(input_file) as im:
             for page in range(OCT_start_frame, OCT_end_frame, 1):
                 print(page)
@@ -571,8 +581,8 @@ class oct_lumen_extraction:
                         
                     if previous_contour is not None:
                         # Perform ICP alignment.
-                        aligned_source_spline, transformation_matrix, final_rotation, total_trans_x, total_trans_y, updated_registration_point, aligned_image_points = self.icp_alignment(first_contour,
-                                                                                                                                                                     current_contour, previous_contour, transformation_matrix_previous, display_images, registration_point, image, page, gray_image, z_coordinate)
+                        aligned_source_spline, transformation_matrix, total_rotation_degrees_previous, total_trans_x, total_trans_y, updated_registration_point, aligned_image_points = self.icp_alignment(first_contour, current_contour, previous_contour, transformation_matrix_previous, display_images, registration_point, image, page, gray_image, z_coordinate, total_rotation_degrees_previous)
+                        
                         # Convert the spline points to NumPy arrays.
                         source_points = np.array(current_contour)
                         aligned_source_points = np.array(aligned_source_spline)

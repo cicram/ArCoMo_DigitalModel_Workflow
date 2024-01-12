@@ -6,10 +6,11 @@ from matplotlib.widgets import Button
 from matplotlib.lines import Line2D
 
 class PointCloudSmoothingVisualizer:
-    def __init__(self, file_path):
+    def __init__(self, file_path, registration_point_CT):
         self.pc_centerline = self.parse_point_cloud_centerline(file_path)
         self.colors = ['black'] * len(self.pc_centerline)
         self.current_green_index = 0
+        self.registration_point_CT = registration_point_CT
         self.current_blue_index = 1
         self.view_limits = None
         self.move_blue_point = True
@@ -58,6 +59,10 @@ class PointCloudSmoothingVisualizer:
         py = self.pc_centerline[:, 1]
         pz = self.pc_centerline[:, 2]
         scatter = self.ax3d.scatter(px, py, pz, c=self.colors, marker='o', picker=True)
+        px = self.registration_point_CT[0]
+        py = self.registration_point_CT[1]
+        pz = self.registration_point_CT[2]
+        scatter = self.ax3d.scatter(px, py, pz, marker='o', color="blue")
         self.ax3d.set_xlabel('Px')
         self.ax3d.set_ylabel('Py')
         self.ax3d.set_zlabel('Pz')

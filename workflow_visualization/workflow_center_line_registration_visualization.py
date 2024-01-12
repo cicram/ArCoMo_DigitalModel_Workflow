@@ -441,7 +441,7 @@ class center_line_registration:
 
                 # Add the actor to the renderer
                 renderer.AddActor(actor_centerline)
-            if np.round(z_visual, 1) == 0.4 or np.round(z_visual, 1) == 20 or np.round(z_visual, 1) == 39.8:
+            if np.round(z_visual, 1) == 40.2 or np.round(z_visual, 1) == 45.0 or np.round(z_visual, 1) == 50.4:
                 with Image.open(input_file_pullback) as im_pullback:
                     # centerline_point = center_line[idx_start - page_pullback]
                     registered_spline_plot = registered_spline
@@ -676,7 +676,7 @@ class center_line_registration:
         renderer.AddActor(actor_calc)
 
         # Load and display the .obj file
-        obj_file_path = 'C:/Users/JL/NX_parts/ArCoMo3_3d_calc.obj'
+        obj_file_path = 'workflow_processed_3d_models/ArCoMo3/Calc_ArCoMo3.obj'
         reader = vtk.vtkOBJReader()
         reader.SetFileName(obj_file_path)
 
@@ -702,7 +702,7 @@ class center_line_registration:
         renderer.AddActor(actor_outershell)
 
         # Load and display the .obj file
-        obj_file_path = 'C:/Users/JL/NX_parts/ArCoMo3_3d_outershell.obj'
+        obj_file_path = 'workflow_processed_3d_models/ArCoMo3/Outershell_ArCoMo3.obj'
         reader = vtk.vtkOBJReader()
         reader.SetFileName(obj_file_path)
 
@@ -728,7 +728,7 @@ class center_line_registration:
         renderer.AddActor(actor_innershell)
 
         # Load and display the .obj file
-        obj_file_path = 'workflow_processed_data_output/ArCoMo3_innershell.obj'
+        obj_file_path = 'workflow_processed_3d_models/ArCoMo3/Innershell_ArCoMo3.obj'
         reader = vtk.vtkOBJReader()
         reader.SetFileName(obj_file_path)
 
