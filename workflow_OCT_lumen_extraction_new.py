@@ -115,7 +115,7 @@ class oct_lumen_extraction:
         return rot_angle, translation_x, translation_y
 
 
-    def icp_alignment(self, first_contour, points, reference_points, transformation_matrix_previous, display_images, registration_point, image, page, z_coordinate, total_rotation_degrees_previous, max_iterations=100, distance_threshold=100, convergence_translation_threshold=1e-3,
+    def icp_alignment(self, first_contour, points, reference_points, transformation_matrix_previous, display_images, registration_point, image, page, z_coordinate, total_rotation_degrees_previous, max_iterations=100, distance_threshold=1600, convergence_translation_threshold=1e-3,
             convergence_rotation_threshold=1e-4, point_pairs_threshold=10, verbose=False):
         """
         An implementation of the Iterative Closest Point algorithm that matches a set of M 2D points to another set
@@ -182,6 +182,7 @@ class oct_lumen_extraction:
             if len(closest_point_pairs) < point_pairs_threshold:
                 if verbose:
                     print('No better solution can be found (very few point pairs)!')
+                print("Not enough points found")
                 break
 
             # compute translation and rotation using point correspondences
@@ -479,7 +480,30 @@ class oct_lumen_extraction:
             cv2.waitKey(0)  # Wait for a key press to move to the next image
             cv2.destroyAllWindows()  # Close the image window
 
-
+    def new_alignment(self, current_contour, page, registration_point):
+        #parse rotation angle
+        i = []
+        rotation_total = []
+        rotation = []
+        with open("C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo14/ArCoMo14_rotations.txt", 'r') as file:
+        # Read each line
+            for line in file:
+                # Split the line into individual values
+                values = line.split()
+            
+                # Extract the values for each column
+                i.append(int(values[0]))
+                rotation_total.append(float(values[1]))
+                rotation.append(float(values[2]))
+        idx = np.where(np.array(i)==page)[0][0]
+        rot_angle = rotation_total[idx]
+        c, s = math.cos(np.radians(rot_angle)), math.sin(np.radians(rot_angle))
+        rot = np.array([[c, -s],
+                        [s, c]])
+        current_contour_rotated = np.dot(current_contour, rot.T)
+        updated_registration_point = np.dot(registration_point[0:2], rot.T)
+        return current_contour_rotated, updated_registration_point
+    
     def process_tif_file(self, crop, input_file, OCT_end_frame, OCT_start_frame, z_offset, conversion_factor, save_file, color1, color2, smoothing_kernel_size,
                         threshold_value, display_images, registration_point, carina_point_frame, save_images_for_controll):
         first_contour_flag = True
@@ -487,7 +511,6 @@ class oct_lumen_extraction:
         previous_contour = None
         point_cloud = []
         transformation_matrix_previous = None
-        my_aligned_images = []
         total_rotation_degrees_previous = 0
         with Image.open(input_file) as im:
             for page in range(OCT_start_frame, OCT_end_frame, 1):
@@ -515,8 +538,7 @@ class oct_lumen_extraction:
 
                 # fit a spline to the contour
                 current_contour = self.spline_fitting(threshold_mask, display_images, save_images_for_controll, page)
-                if page == 89:
-                    current_contour = None
+
                 if current_contour is not None:
 
                     # save unaligned pointcloud
@@ -538,14 +560,32 @@ class oct_lumen_extraction:
                         
                     if previous_contour is not None:
                         # Perform ICP alignment.
-                        aligned_source_spline, transformation_matrix, total_rotation_degrees_previous, total_trans_x, total_trans_y, updated_registration_point = self.icp_alignment(first_contour, current_contour, previous_contour, transformation_matrix_previous, display_images, registration_point, image, page, z_coordinate, total_rotation_degrees_previous)
-                        
+                        aligned_source_spline_OLD, transformation_matrix, total_rotation_degrees_previous, total_trans_x, total_trans_y, updated_registration_point_OLD = self.icp_alignment(first_contour, current_contour, previous_contour, transformation_matrix_previous, display_images, registration_point, image, page, z_coordinate, total_rotation_degrees_previous)
+                        aligned_source_spline, updated_registration_point = self.new_alignment(current_contour, page, registration_point)
+                        ###############################################################################
+                        if False:
+                            plt.figure(figsize=(10, 6))
+                            plt.plot([point[0] for point in aligned_source_spline_old], [point[1] for point in aligned_source_spline_old], 'g-',
+                                    label='New')
+                            plt.plot([point[0] for point in aligned_source_points], [point[1] for point in aligned_source_points],
+                                    'r-', label='Old')
+                            plt.legend()
+                            plt.gca().invert_yaxis()  # Invert the y-axis to match typical image coordinates.
+                            plt.gca().set_aspect('equal', adjustable='box')  # Ensure equal aspect ratio.
+                            plt.title('Original and Transformed Splines')
+                            plt.xlabel('X-coordinate')
+                            plt.ylabel('Y-coordinate')
+                            plt.show()
+                        ###############################################################################
                         # Convert the spline points to NumPy arrays.
                         source_points = np.array(current_contour)
                         aligned_source_points = np.array(aligned_source_spline)
                         transformation_matrix_previous = transformation_matrix
                         # Apply transformation also to registration point
                         if page == (carina_point_frame):
+                            print("Registration point first old than new")
+                            print(updated_registration_point_OLD)
+                            print(updated_registration_point)
                             centroid = np.mean(aligned_source_points, axis=0)
                             updated_registration_point[0] -= centroid[0]
                             updated_registration_point[1] -= centroid[1]
@@ -573,7 +613,6 @@ class oct_lumen_extraction:
                             plt.show()
 
                     else:
-                        print("first contour")
                         aligned_source_points = np.array(current_contour)
                         first_contour = np.array(current_contour)
                     # Calculate the centroid of the aligned points.

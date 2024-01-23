@@ -1,4 +1,4 @@
-from workflow_OCT_lumen_extraction import oct_lumen_extraction
+from workflow_OCT_lumen_extraction_new import oct_lumen_extraction
 from workflow_center_line_registration import center_line_registration
 from workflow_visual_pointcloud_editing_VTK_point import point_cloud_visual_editing
 from workflow_center_line_smooting_gui import PointCloudSmoothingVisualizer
@@ -13,7 +13,8 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = OCTAnalyzerGUI(root)
     root.mainloop()
-    
+
+if False:
     color1 = (0, 255, 0)  # Green circle
     color2 = (192, 220, 192)  # Circle dots color
 
@@ -127,7 +128,7 @@ if __name__ == "__main__":
     # Extract the points as a numpy array
     ct_points_ = pcd.points
 
-    if save_file or True:
+    if save_file:
         # Define the output file name
         output_file_ct_points = "temp/CT_pointcloud.txt"
 

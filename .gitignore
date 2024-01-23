@@ -164,3 +164,5 @@ cython_debug/
 *.tif
 */my_aligned_points.txt
 *my_aligned_points.txt
+
+ArCoMo_Data/
