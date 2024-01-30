@@ -1,0 +1,47 @@
+import cv2
+import numpy as np
+from scipy.ndimage.filters import gaussian_filter
+from skimage import graph, data, io, segmentation, color, filters
+from skimage.measure import approximate_polygon, subdivide_polygon
+
+# Initialize variables
+drawing = False
+ix, iy = -1, -1
+image = None
+
+# Mouse callback function
+def draw_circle(event, x, y, flags, param):
+    global ix, iy, drawing, image
+
+    if event == cv2.EVENT_LBUTTONDOWN:
+        drawing = True
+        ix, iy = x, y
+
+    elif event == cv2.EVENT_MOUSEMOVE:
+        if drawing == True:
+            # Compute the weights on the edges in the graph and find path
+            graph_img = image.copy()
+            graph_img = segmentation.slic(color.gray2rgb(graph_img), compactness=30, n_segments=400)
+            edges = filters.sobel(graph_img)
+            path, cost = graph.route_through_array(edges, start=(ix, iy), end=(x, y), fully_connected=True)
+            path = np.array(path).T
+            path = approximate_polygon(path, tolerance=5)
+            cv2.polylines(image, [path], False, 255, 2)
+
+    elif event == cv2.EVENT_LBUTTONUP:
+        drawing = False
+
+# Load an image
+image = cv2.imread('experimental/Test_live_wire.JPG', 0)
+# Apply Gaussian filter
+image = gaussian_filter(image, sigma=1)
+
+cv2.namedWindow('image')
+cv2.setMouseCallback('image', draw_circle)
+
+while(1):
+    cv2.imshow('image', image)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cv2.destroyAllWindows()

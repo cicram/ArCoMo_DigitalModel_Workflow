@@ -1,0 +1,137 @@
+import cv2
+import numpy as np
+import heapq
+
+class LiveWireSegmentation:
+    def __init__(self, image_path):
+        self.image = cv2.imread(image_path)
+        self.gray_image = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+        self.result_image = self.image.copy()
+        self.mask = np.zeros_like(self.gray_image, dtype=np.uint8)
+        self.points = []
+        self.selected_point = None
+
+        cv2.namedWindow("Live Wire Segmentation")
+        cv2.imshow("Live Wire Segmentation", self.image)
+        cv2.setMouseCallback("Live Wire Segmentation", self.mouse_callback)
+
+    def mouse_callback(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if flags & cv2.EVENT_FLAG_SHIFTKEY:
+                # If Shift key is pressed, delete the nearest point
+                self.delete_nearest_point((x, y))
+            else:
+                # Otherwise, add or select a point
+                self.add_or_select_point((x, y))
+        elif event == cv2.EVENT_LBUTTONUP:
+            # Release the selected point after dragging
+            self.selected_point = None
+        elif event == cv2.EVENT_MOUSEMOVE:
+            # If a point is selected, update its position while dragging
+            if self.selected_point is not None:
+                self.points[self.selected_point] = (x, y)
+                self.segment_live_wire()
+
+    def add_or_select_point(self, point):
+        # Check if a point is close to the clicked position
+        for i, existing_point in enumerate(self.points):
+            if np.linalg.norm(np.array(existing_point) - np.array(point)) < 10:
+                self.selected_point = i
+                return
+
+        # If no existing point is close, add a new point
+        self.points.append(point)
+        self.selected_point = len(self.points) - 1
+        self.segment_live_wire()
+
+    def delete_nearest_point(self, point):
+        if not self.points:
+            return
+
+        # Find the index of the nearest point and remove it
+        distances = [np.linalg.norm(np.array(existing_point) - np.array(point)) for existing_point in self.points]
+        min_distance_index = np.argmin(distances)
+
+        del self.points[min_distance_index]
+        self.segment_live_wire()
+
+    def segment_live_wire(self):
+        self.result_image = self.image.copy()  # Reset result image
+        self.mask = np.zeros_like(self.gray_image, dtype=np.uint8)
+
+        if len(self.points) > 1:
+            for i in range(len(self.points) - 1):
+                path = self.dijkstra(self.points[i], self.points[i + 1])
+
+                # Close the path
+                path.append(path[0])
+
+                cv2.polylines(self.mask, [np.array(path)], isClosed=True, color=255, thickness=2)
+
+            #cv2.fillPoly(self.mask, [np.array(self.points)], color=255)
+
+        # Draw points on the result image
+        for i, point in enumerate(self.points):
+            if i == self.selected_point:
+                color = (0, 0, 255)  # Selected point color (yellow)
+                size = 40
+            else:
+                color = (255, 0, 0)  # Default point color (red)
+                size = 5
+            cv2.circle(self.result_image, point, size, color, -1)
+
+        cv2.imshow("Live Wire Segmentation", cv2.addWeighted(self.image, 0.7, cv2.cvtColor(self.mask, cv2.COLOR_GRAY2BGR), 0.3, 0))
+
+    def dijkstra(self, start, end):
+        heap = [(0, start, [])]
+        visited = set()
+
+        while heap:
+            (cost, current, path) = heapq.heappop(heap)
+
+            if current in visited:
+                continue
+
+            visited.add(current)
+            path = path + [current]
+
+            if current == end:
+                return path
+
+            for neighbor in self.get_neighbors(current):
+                heapq.heappush(heap, (cost + self.cost(current, neighbor), neighbor, path))
+
+    def cost(self, p1, p2):
+        intensity_difference = abs(int(self.gray_image[p1[1], p1[0]]) - int(self.gray_image[p2[1], p2[0]]))
+        return intensity_difference
+
+    def get_neighbors(self, point):
+        neighbors = []
+        for i in range(-1, 2):
+            for j in range(-1, 2):
+                x, y = point[0] + i, point[1] + j
+                if 0 <= x < self.gray_image.shape[1] and 0 <= y < self.gray_image.shape[0]:
+                    neighbors.append((x, y))
+        return neighbors
+
+    def save_segmentation(self, output_path):
+        cv2.imwrite(output_path, self.mask)
+
+if __name__ == "__main__":
+    image_path = "experimental/Test_live_wire.JPG"  # Replace with the path to your image
+    live_wire_segmentation = LiveWireSegmentation(image_path)
+
+    while True:
+        key = cv2.waitKey(1) & 0xFF
+        if key == 27:  # Press 'Esc' to exit
+            break
+
+    cv2.destroyAllWindows()
+
+    # Show the final segmentation result and save it
+    live_wire_segmentation.save_segmentation("experimental/result.jpg")
+    cv2.imshow("Final Segmentation Result", live_wire_segmentation.result_image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
