@@ -250,8 +250,8 @@ class OCTAnalyzerGUI:
 
         # Get oct lumen contours
         oct_lumen_contours = oct_extractor.get_lumen_contour(self.crop, self.input_file_OCT, self.OCT_end_frame, self.OCT_start_frame, self.OCT_registration_frame,
-                                                                                     self.z_distance, self.conversion_factor, self.save_file, self.color1, self.color2, 
-                                                                                     self.smoothing_kernel_size, self.threshold_value, self.display_results, self.save_images_for_controll)
+                                                             self.z_distance, self.conversion_factor, self.save_file, self.color1, self.color2, 
+                                                             self.smoothing_kernel_size, self.threshold_value, self.display_results, self.save_images_for_controll)
          
         # Align oct frames and registration point
         oct_lumen_point_cloud = oct_extractor.frames_alignment(oct_lumen_contours, oct_rotation_angles, self.z_distance)
@@ -259,7 +259,7 @@ class OCTAnalyzerGUI:
         
         # Restructure frames
         center_line_registrator = center_line_registration()
-        grouped_OCT_lumen = center_line_registrator.restructure_point_clouds(oct_lumen_point_cloud)
+        grouped_OCT_lumen = center_line_registrator.restructure_point_clouds(oct_lumen_point_cloud, self.OCT_start_frame, self.OCT_end_frame, self.z_distance)
 
         # Get oct calc contours
         if processing_info == CALC or processing_info == STENT_AND_CALC:
@@ -269,7 +269,7 @@ class OCTAnalyzerGUI:
             # Align frames
             oct_calc_point_cloud = oct_extractor.frames_alignment(calc_contours, oct_rotation_angles, self.z_distance)
             # Restructure frames
-            grouped_calc = center_line_registrator.restructure_point_clouds(oct_calc_point_cloud)
+            grouped_calc = center_line_registrator.restructure_point_clouds(oct_calc_point_cloud, self.OCT_start_frame, self.OCT_end_frame, self.z_distance)
 
 
         # Get oct stent contours
@@ -280,7 +280,7 @@ class OCTAnalyzerGUI:
             # Align frames
             oct_stent_point_cloud = oct_extractor.frames_alignment(stent_contours, oct_rotation_angles, self.z_distance)
             # Restructure frames     
-            grouped_stent = center_line_registrator.restructure_point_clouds(oct_stent_point_cloud)
+            grouped_stent = center_line_registrator.restructure_point_clouds(oct_stent_point_cloud, self.OCT_start_frame, self.OCT_end_frame, self.z_distance)
 
 
         # Load marked registration point in CT
@@ -299,9 +299,9 @@ class OCTAnalyzerGUI:
         centerline_vectors = center_line_registrator.find_centerline_vectors(resampled_pc_centerline, self.display_results)
 
         # Get registration hight
-        # Update instructions
         instruction_text = "Select the registration height on the centerline (should be on hight of bifurication)"
         self.add_instruction_text(instruction_text)
+
         centerline_registration_point_selector = PointCloudRegistrationPointSelectionVisualizer(resampled_pc_centerline, registration_point_CT)
         centerline_registration_start = centerline_registration_point_selector.selected_point_index
 
@@ -327,7 +327,7 @@ class OCTAnalyzerGUI:
             x_filtered = []
             y_filtered = []
             z_filtered = []
-            for z_level, frame_points in grouped_OCT_lumen.items():
+            for z_level, frame_points in rotated_grouped_OCT_lumen.items():
                 for i, data in enumerate(frame_points):
                     x_filtered.append(frame_points[i][0])
                     y_filtered.append(frame_points[i][1])
@@ -336,18 +336,29 @@ class OCTAnalyzerGUI:
             ax.set_xlabel('Px')
             ax.set_ylabel('Py')
             ax.set_zlabel('Pz')
+            x_filtered = []
+            y_filtered = []
+            z_filtered = []
+            for z_level, frame_points in rotated_grouped_OCT_calc.items():
+                for i, data in enumerate(frame_points):
+                    x_filtered.append(frame_points[i][0])
+                    y_filtered.append(frame_points[i][1])
+                    z_filtered.append(frame_points[i][2])
+            ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
+   
             plt.show()
             #------------------------------------------#
 
 
         #register frames onto centerline
-        registered_oct_lumen = center_line_registrator.register_OCT_frames_onto_centerline(rotated_grouped_OCT_lumen, centerline_registration_start, centerline_vectors, 
-                                                                                            resampled_pc_centerline, self.OCT_registration_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
+        if processing_info == BASIC:
+            registered_oct_lumen = center_line_registrator.register_OCT_frames_onto_centerline(rotated_grouped_OCT_lumen, centerline_registration_start, centerline_vectors,
+                                                                                                resampled_pc_centerline, self.OCT_registration_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
         if processing_info == STENT or processing_info == STENT_AND_CALC:
-            registered_oct_stent = center_line_registrator.register_OCT_frames_onto_centerline(rotated_grouped_OCT_stent, centerline_registration_start, centerline_vectors, 
+            registered_oct_lumen, registered_oct_stent = center_line_registrator.register_OCT_frames_onto_centerline_calc(rotated_grouped_OCT_stent, rotated_grouped_OCT_stent,centerline_registration_start, centerline_vectors,
                                                                                                 resampled_pc_centerline, self.OCT_registration_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
         if processing_info == CALC or processing_info == STENT_AND_CALC:
-            registered_oct_calc = center_line_registrator.register_OCT_frames_onto_centerline(rotated_grouped_OCT_calc, centerline_registration_start, centerline_vectors, 
+            registered_oct_lumen, registered_oct_calc = center_line_registrator.register_OCT_frames_onto_centerline_calc(rotated_grouped_OCT_lumen, rotated_grouped_OCT_calc, centerline_registration_start, centerline_vectors,
                                                                                                 resampled_pc_centerline, self.OCT_registration_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
 
         # Create CT point cloud from ply file

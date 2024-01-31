@@ -16,6 +16,8 @@ import numpy as np
 import math
 from dijkstar import Graph, find_path
 
+from workflow_stent_calc_segmentation_calc import ContourDrawer
+
 class oct_extraction:
     def __init__(self):
         self.oct_registration_point_x = 0
@@ -264,11 +266,11 @@ class oct_extraction:
         return cv.GaussianBlur(image, (5, 5), 0)
 
 
-    def segment_calc(self, input_file, OCT_start_frame, OCT_end_frame, crop_top, z_distance, conversion_factor):
+    def segment_calc_live_wire(self, input_file, OCT_start_frame, OCT_end_frame, crop_top, z_distance, conversion_factor):
         saved_paths = []
         saved_splines = []
         with Image.open(input_file) as im:
-            for page in range(OCT_start_frame, 8, 1):
+            for page in range(105, 106, 1):
                 next_slide = False
                 path_total = []
                 path = []
@@ -330,12 +332,14 @@ class oct_extraction:
                         elif key == ord("r") or key == ord("R"):
                             # Reset path if the "R" key is pressed
                             final = img.copy()
+                            path_total = []
+                            path = []
 
                         elif key == ord("s") or key == ord("S"):
                             # Save the path if the "S" key is pressed
                             if len(path_total) > 1:
                                 # Fit a spline to the path and save the 500 points
-                                fitted_spline = self.fit_spline_to_path(path_total, (page+OCT_start_frame)*z_distance, conversion_factor)
+                                fitted_spline = self.fit_spline_to_path(path_total, (page-OCT_start_frame)*z_distance, conversion_factor)
                                 saved_splines.append(fitted_spline)
                                 print("Spline saved!")
                             next_slide = True
@@ -386,7 +390,9 @@ class oct_extraction:
             
             else:
                 # Segment new calc
-                calc_contours = self.segment_calc(input_file, OCT_start_frame, OCT_end_frame, crop_top, z_space, conversion_factor)
+                drawer = ContourDrawer()
+                calc_contours = drawer.segment_calc(input_file, OCT_start_frame, OCT_end_frame, crop_top, z_space, conversion_factor)
+
                 # save the file
                 with open(path_segmented_calc, 'w') as file:
                             for path in calc_contours:
@@ -395,7 +401,8 @@ class oct_extraction:
         
         else:
             # File doesn't exist, perform a new segmentation
-            calc_contours = self.segment_calc(input_file, OCT_start_frame, OCT_end_frame, crop_top, z_space, conversion_factor)
+            drawer = ContourDrawer()
+            calc_contours = drawer.segment_calc(input_file, OCT_start_frame, OCT_end_frame, crop_top, z_space, conversion_factor)
             # save the file
             with open(path_segmented_calc, 'w') as file:
                 for path in calc_contours:
