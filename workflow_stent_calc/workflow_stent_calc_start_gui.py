@@ -41,7 +41,8 @@ class OCTAnalyzerGUI:
         self.threshold_value = 100
 
         # Image crop-off
-        self.crop = 157 #157 for view 10mm #130 for view 7mm  # pixels
+        self.crop_top = 157 #157 for view 10mm #130 for view 7mm  # pixels
+        self.crop_bottom = 0 
 
         # Define the conversion factor: 1 millimeter = 103 pixels
         self.conversion_factor = 1 / 103.0
@@ -198,7 +199,7 @@ class OCTAnalyzerGUI:
             self.input_file_OCT_stent = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_stent.tif'
             self.input_file_OCT_blank = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_blank.tif'
             self.path_point_cloud_calc = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_calc.xyz'
-            self.path_segmented_calc = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_segmented_calc.txt'
+            self.path_segmented_calc = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_segmented_calc.xyz'
 
             processing_info = STENT_AND_CALC
             self.run_processing(processing_info)
@@ -206,7 +207,8 @@ class OCTAnalyzerGUI:
         elif self.include_stent and not self.include_calc:
             # Run workflow just with stent
             print("stent workflow")
-            # TODO, adapt cropping!!
+            print("Change bottom cropping for stent!")
+            self.crop_bottom = 0
             self.input_file_OCT = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_lumen.tif'
             self.input_file_OCT_stent = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_stent.tif'
             self.input_file_OCT_blank = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_blank.tif'
@@ -238,7 +240,7 @@ class OCTAnalyzerGUI:
 
         # Get registration point in oct
         oct_extractor = oct_extraction()
-        registration_point_OCT = oct_extractor.get_registration_point(self.input_file_OCT, self.crop, self.OCT_start_frame, self.OCT_registration_frame, self.display_results, self.z_distance,
+        registration_point_OCT = oct_extractor.get_registration_point(self.input_file_OCT, self.crop_top, self.crop_bottom, self.OCT_start_frame, self.OCT_registration_frame, self.display_results, self.z_distance,
                                                                    self.save_file, self.conversion_factor)
         
         # Update instructions
@@ -249,7 +251,7 @@ class OCTAnalyzerGUI:
         oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank) 
 
         # Get oct lumen contours
-        oct_lumen_contours = oct_extractor.get_lumen_contour(self.crop, self.input_file_OCT, self.OCT_end_frame, self.OCT_start_frame, self.OCT_registration_frame,
+        oct_lumen_contours = oct_extractor.get_lumen_contour(self.crop_top, self.crop_bottom, self.input_file_OCT, self.OCT_end_frame, self.OCT_start_frame, self.OCT_registration_frame,
                                                              self.z_distance, self.conversion_factor, self.save_file, self.color1, self.color2, 
                                                              self.smoothing_kernel_size, self.threshold_value, self.display_results, self.save_images_for_controll)
          
@@ -265,7 +267,7 @@ class OCTAnalyzerGUI:
         if processing_info == CALC or processing_info == STENT_AND_CALC:
             instruction_text = "OCT calc extraction is performed. Instructions: Draw path with left mouse click then release. Press 'C' to accept drawn path. Press 'R' to restart. Press 'S' to save path."
             self.add_instruction_text(instruction_text)
-            calc_contours = oct_extractor.get_calc_contours(self.path_segmented_calc, self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame, self.z_distance, self.conversion_factor, self.crop)
+            calc_contours = oct_extractor.get_calc_contours(self.path_segmented_calc, self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame, self.z_distance, self.conversion_factor, self.crop_top, self.crop_bottom)
             # Align frames
             oct_calc_point_cloud = oct_extractor.frames_alignment(calc_contours, oct_rotation_angles, self.z_distance)
             # Restructure frames
@@ -299,14 +301,15 @@ class OCTAnalyzerGUI:
         centerline_vectors = center_line_registrator.find_centerline_vectors(resampled_pc_centerline, self.display_results)
 
         # Get registration hight
-        instruction_text = "Select the registration height on the centerline (should be on hight of bifurication)"
+        instruction_text = "Select the registration height on the centerline (should be on hight of bifurication). Red for main branch, Blue for side branch, use toggle button to switch"
         self.add_instruction_text(instruction_text)
 
         centerline_registration_point_selector = PointCloudRegistrationPointSelectionVisualizer(resampled_pc_centerline, registration_point_CT)
-        centerline_registration_start = centerline_registration_point_selector.selected_point_index
+        centerline_registration_start = centerline_registration_point_selector.selected_point_index_red
+        selected_registration_point_CT = np.array(centerline_registration_point_selector.selected_registration_point_CT)
 
         oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(resampled_pc_centerline, centerline_registration_start, grouped_OCT_lumen, 
-                                                                                                                          registration_point_OCT, registration_point_CT, self.OCT_registration_frame, self.z_distance, self.display_results)
+                                                                                                                          registration_point_OCT, selected_registration_point_CT, self.OCT_registration_frame, self.z_distance, self.display_results)
 
         # rotate OCT_frames
         rotated_grouped_OCT_lumen = center_line_registrator.rotate_frames(grouped_OCT_lumen, oct_lumen_rotation_matrix, self.display_results)
@@ -355,13 +358,41 @@ class OCTAnalyzerGUI:
             registered_oct_lumen = center_line_registrator.register_OCT_frames_onto_centerline(rotated_grouped_OCT_lumen, centerline_registration_start, centerline_vectors,
                                                                                                 resampled_pc_centerline, self.OCT_registration_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
         if processing_info == STENT or processing_info == STENT_AND_CALC:
-            registered_oct_lumen, registered_oct_stent = center_line_registrator.register_OCT_frames_onto_centerline_calc(rotated_grouped_OCT_stent, rotated_grouped_OCT_stent,centerline_registration_start, centerline_vectors,
+            registered_oct_lumen, registered_oct_stent = center_line_registrator.register_OCT_frames_onto_centerline_stent(rotated_grouped_OCT_lumen, rotated_grouped_OCT_stent,centerline_registration_start, centerline_vectors,
                                                                                                 resampled_pc_centerline, self.OCT_registration_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
         if processing_info == CALC or processing_info == STENT_AND_CALC:
             registered_oct_lumen, registered_oct_calc = center_line_registrator.register_OCT_frames_onto_centerline_calc(rotated_grouped_OCT_lumen, rotated_grouped_OCT_calc, centerline_registration_start, centerline_vectors,
                                                                                                 resampled_pc_centerline, self.OCT_registration_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
 
         # Create CT point cloud from ply file
+        if self.display_results or True:
+            #------------------------------------------#
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            # Show the plot
+            x_filtered = []
+            y_filtered = []
+            z_filtered = []
+            for frame_points in registered_oct_lumen:
+                x_filtered.append(frame_points[0])
+                y_filtered.append(frame_points[1])
+                z_filtered.append(frame_points[2])
+            ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
+            ax.set_xlabel('Px')
+            ax.set_ylabel('Py')
+            ax.set_zlabel('Pz')
+            x_filtered = []
+            y_filtered = []
+            z_filtered = []
+            for frame_points in registered_oct_stent:
+                x_filtered.append(frame_points[0])
+                y_filtered.append(frame_points[1])
+                z_filtered.append(frame_points[2])
+            ax.scatter(x_filtered, y_filtered, z_filtered, c="red", marker='o')
+
+            plt.show()
+            #------------------------------------------#
 
         # Update instructions
         instruction_text = "Delete overlapping point form the pointcloud, then save it."

@@ -23,6 +23,7 @@ class oct_extraction:
         self.oct_registration_point_x = 0
         self.oct_registration_point_y = 0
         self.retPt = []
+        self.choice = "Use Existing"
 
     # Function to filter by RGB color
     def filter_color(self, input_image, color1, color2):
@@ -369,16 +370,42 @@ class oct_extraction:
                     self.retPt = []
         
         return saved_splines
+    
 
-    def get_calc_contours(self, path_segmented_calc, input_file, OCT_start_frame, OCT_end_frame, z_space, conversion_factor, crop_top):
+    def close_dialog(self, dialog, choice):
+        print(f"You chose: {choice}")
+        self.choice = choice
+        dialog.destroy()
+        self.window.destroy()  
+
+
+    def custom_dialog(self):
+        self.window = tk.Tk()  
+        self.window.withdraw()  
+
+        # Create a new top-level window
+        dialog = tk.Toplevel(self.window) 
+
+        # Add your message
+        tk.Label(dialog, text="A segmentation for this case already exists. What do you want to do?").pack()
+
+        # Add your buttons
+        tk.Button(dialog, text="Use Existing", command=lambda: self.close_dialog(dialog, "Use Existing")).pack()
+        tk.Button(dialog, text="Edit", command=lambda: self.close_dialog(dialog, "Edit")).pack()
+        tk.Button(dialog, text="New", command=lambda: self.close_dialog(dialog, "New")).pack()
+
+        self.window.mainloop()
+
+
+    def get_calc_contours(self, path_segmented_calc, input_file, OCT_start_frame, OCT_end_frame, z_space, conversion_factor, crop_top, crop_bottom):
         # Check if there is already a calc file, if yes, ask the user if he wants to use this or if he wants to do a new segmentation
-
+        existing_contours = []
         if os.path.exists(path_segmented_calc):
-            # Ask the user if they want to use the existing file or perform a new segmentation
-            result = messagebox.askquestion("File Exists", "A segmentation for this case already exists. Do you want to use this file for segmentation?",
+            # Ask the user if they want to use the existing file, perform a new segmentation, or edit the existing file
+            choice_existing = messagebox.askquestion("File Exists", "A segmentation for this case already exists. Do you want to use this file for segmentation?",
                                             icon='warning')
-
-            if result == 'yes':
+            
+            if choice_existing == 'yes':
                 # Parse calc
                 results = []
                 with open(path_segmented_calc, 'r') as file:
@@ -387,30 +414,51 @@ class oct_extraction:
                         path = eval(line.strip())
                         results.append(path)
                 calc_contours = results
-            
-            else:
-                # Segment new calc
-                drawer = ContourDrawer()
-                calc_contours = drawer.segment_calc(input_file, OCT_start_frame, OCT_end_frame, crop_top, z_space, conversion_factor)
 
-                # save the file
-                with open(path_segmented_calc, 'w') as file:
-                            for path in calc_contours:
-                                # Write each path to the file
-                                file.write(str(path) + '\n')
-        
+            elif choice_existing == 'no':
+                edit_choice = messagebox.askquestion("Edit or start a new", "Do you want to edit the exisintg segmentation, if no you will start a new?",
+                                            icon='warning')
+                if edit_choice == 'yes':
+                    # Edit existing calc
+                    with open(path_segmented_calc, 'r') as file:
+                        for line in file:
+                            # Parse each line and convert it back to the original data structure
+                            path = eval(line.strip())
+                            existing_contours.append(path)
+
+                    drawer = ContourDrawer()
+                    calc_contours = drawer.segment_calc(input_file, OCT_start_frame, OCT_end_frame, crop_top, crop_bottom, z_space, conversion_factor, existing_contours)
+
+                    # Save the file
+                    with open(path_segmented_calc, 'w') as file:
+                        for path in calc_contours:
+                            # Write each path to the file
+                            file.write(str(path) + '\n')
+            
+                elif edit_choice == 'no':
+                    # Segment new calc
+                    drawer = ContourDrawer()
+                    calc_contours = drawer.segment_calc(input_file, OCT_start_frame, OCT_end_frame, crop_top, crop_bottom, z_space, conversion_factor, existing_contours)
+
+                    # Save the file
+                    with open(path_segmented_calc, 'w') as file:
+                        for path in calc_contours:
+                            # Write each path to the file
+                            file.write(str(path) + '\n')
+
         else:
             # File doesn't exist, perform a new segmentation
             drawer = ContourDrawer()
-            calc_contours = drawer.segment_calc(input_file, OCT_start_frame, OCT_end_frame, crop_top, z_space, conversion_factor)
-            # save the file
+            calc_contours = drawer.segment_calc(input_file, OCT_start_frame, OCT_end_frame, crop_top, crop_bottom, z_space, conversion_factor, existing_contours)
+            
+            # Save the file
             with open(path_segmented_calc, 'w') as file:
                 for path in calc_contours:
                     # Write each path to the file
                     file.write(str(path) + '\n')
 
         return calc_contours
-    
+        
 
     def get_stent_contours(self, input_file, OCT_start_frame, OCT_end_frame, z_space, conversion_factor):
         color = [255, 255, 255]
@@ -460,7 +508,7 @@ class oct_extraction:
         return points
     
 
-    def get_lumen_contour(self, crop, input_file, OCT_end_frame, OCT_start_frame, OCT_registration_frame, z_offset, conversion_factor, save_file, color1, color2, smoothing_kernel_size,
+    def get_lumen_contour(self, crop_top, crop_bottom, input_file, OCT_end_frame, OCT_start_frame, OCT_registration_frame, z_offset, conversion_factor, save_file, color1, color2, smoothing_kernel_size,
                         threshold_value, display_images, save_images_for_controll):
         z_coordinate = 0
         point_cloud = []
@@ -470,7 +518,7 @@ class oct_extraction:
                 image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
                 image_flipped = np.flipud(image)
                 height, width, channels = image_flipped.shape
-                open_cv_image = image_flipped[0: height-crop, :, ::-1].copy()  # Crop image at xxx pixels from top
+                open_cv_image = image_flipped[crop_bottom: height-crop_top, :, ::-1].copy()  # Crop image at xxx pixels from top
 
                 # Apply the color filter
                 binary_mask = self.filter_color(open_cv_image, color1, color2)
@@ -515,13 +563,13 @@ class oct_extraction:
             cv2.destroyAllWindows()
 
 
-    def get_registration_point(self, input_file, crop, OCT_start_frame, OCT_registration_frame, display_images, z_offset, save_file, conversion_factor):
+    def get_registration_point(self, input_file, crop_top, crop_bottom,  OCT_start_frame, OCT_registration_frame, display_images, z_offset, save_file, conversion_factor):
         with Image.open(input_file) as im:
             im.seek(OCT_registration_frame)  # Move to marked page (frame)
             image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
             image_flipped = np.flipud(image)
             height, width, channels = image_flipped.shape
-            open_cv_image = image_flipped[0: height-crop, :, ::-1].copy()
+            open_cv_image = image_flipped[crop_bottom: height-crop_top, :, ::-1].copy()
 
             # Display the cropped image
             cv2.imshow('Select registration point (left mouse click)', open_cv_image)            

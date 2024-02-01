@@ -53,11 +53,16 @@ class ContourDrawer:
         # Extract x and y coordinates from the path
         concatenated_path = [point for subpath in path for point in subpath]
         path_x, path_y = zip(*concatenated_path)
-        plt.plot(path_x, path_y)
-        plt.show()
+        print(len(path_x))
+        # Remove duplicates
+        points = list(zip(path_x, path_y))
+        points = list(dict.fromkeys(points))
+        path_x, path_y = zip(*points)
+        print(len(path_x))
+
         try:
             # Fit a spline to the path
-            tck, _ = splprep([path_x, path_y], s=1000, per=True)
+            tck, _ = splprep([path_x, path_y], s=500, per=True)
 
             # Evaluate the spline to get points on the fitted spline
             u = np.linspace(0, 1, 500)  # Adjust the number of points as needed
@@ -71,18 +76,18 @@ class ContourDrawer:
             print("could not fit spline")
             return None
 
-    def segment_calc(self, input_file, OCT_start_frame, OCT_end_frame, crop_top, z_distance, conversion_factor):
+    def segment_calc(self, input_file, OCT_start_frame, OCT_end_frame, crop_top, crop_bottom, z_distance, conversion_factor, existing_contours):
         saved_splines = []
 
         with Image.open(input_file) as im:
-            for page in range(105, 115, 1):
+            for page in range(OCT_start_frame, OCT_end_frame, 1):
                 next_slide = False
                 self.path_total = []
                 im.seek(page)  # Move to the current page (frame)
                 image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
                 image_flipped = np.flipud(image)
                 height, width, channels = image_flipped.shape
-                open_cv_image = image_flipped[0: height-crop_top, :, ::-1].copy()  # Crop image at xxx pixels from top
+                open_cv_image = image_flipped[crop_bottom: height-crop_top, :, ::-1].copy()  # Crop image at xxx pixels from top
 
                 self.final = open_cv_image.copy()
 
@@ -90,6 +95,22 @@ class ContourDrawer:
                 cv.namedWindow("image")
                 cv.setMouseCallback("image", self.click)
                 cv.imshow("image", self.final)
+
+                if existing_contours:
+                    for existing_contour in existing_contours:
+                        # Check if the existing contour matches the current page
+                        existing_z_value = existing_contour[0][2]
+                        if existing_z_value == (page - OCT_start_frame) * z_distance:
+                            # Draw the existing contour
+                            cv.polylines(self.final, [np.array(existing_contour)[:, :2].astype(int)], isClosed=True, color=(0, 0, 255), thickness=1)
+                            # Add x and y values to self.path_total
+                            existing_x, existing_y, existing_z = zip(*existing_contour)
+                            existing_x = [int(val/conversion_factor) for val in existing_x]
+                            existing_y = [int(val/conversion_factor) for val in existing_y]
+                            self.path_total.append(list(zip(existing_x, existing_y)))
+                            for itr in range(len(self.path_total[0])-1):
+                                cv.line(self.final, (self.path_total[0][itr]), (self.path_total[0][itr+1]), (0, 0, 255), 1)
+                            cv.imshow("image", self.final)
 
                 while True:
                     cv.imshow("image", self.final)

@@ -354,6 +354,75 @@ class center_line_registration:
 
 
         return rotation_matrix
+    def register_OCT_frames_onto_centerline_stent(self, grouped_lumen_frames, grouped_stent_frames, centerline_registration_start, centerline_vectors,
+                                            resampled_pc_centerline, OCT_registration_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
+        saved_registered_splines = []
+        saved_registered_stent = []
+        z_level_preivous = None
+
+        # Find start idx to know at what centerline index they have to be aligned 
+        z_level_registration = round(OCT_registration_frame * z_distance, 1)
+        count = 0
+
+        for z_level, frame_points in grouped_lumen_frames.items():
+            if z_level > z_level_registration:
+                count += 1
+
+        closest_centerline_point_idx = centerline_registration_start - count
+        # Iterate through the splines and align them on the centerline points.
+        for z_level, frame_points in grouped_lumen_frames.items():
+
+            # Find the corresponding centerline point and its vector.
+            if z_level_preivous is None:
+                z_level_preivous = z_level
+            idx = round((z_level - z_level_preivous) / z_distance)
+            closest_centerline_point_idx += idx
+            z_level_preivous = z_level
+
+            target_centerline_point = resampled_pc_centerline[closest_centerline_point_idx]
+            normal_vector = centerline_vectors[closest_centerline_point_idx]
+
+            # Calculate the transformation matrix to align the spline with the centerline point's vector.
+            source_normal_vector = np.array([0, 0, -1])
+
+            rotation_matrix = self.rotation_matrix_from_vectors(source_normal_vector, normal_vector)
+
+            registered_spline = np.array(frame_points)  # Copy the spline points
+            # Apply the rotation to the entire frame (spline points).
+            registered_spline = np.dot(rotation_matrix, registered_spline.T).T  # Apply rotation
+            # Perform the translation to center the spline on the centerline point.
+            translation_vector = target_centerline_point - registered_spline.mean(axis=0)
+            registered_spline += translation_vector
+
+            # Append the registered spline to the list
+            saved_registered_splines.append(registered_spline) 
+
+            # Get stent at that hight if it exists
+            if z_level in grouped_stent_frames:
+                calc_contour = grouped_stent_frames[z_level]
+                registered_calc = np.array(calc_contour)
+                registered_calc = np.dot(rotation_matrix, registered_calc.T).T
+                registered_calc += translation_vector
+                saved_registered_stent.append(registered_calc)         
+
+        oct_points = []
+        for spline in saved_registered_splines:
+            spline = spline[::2]
+            for point in spline:
+                oct_points.append([point[0], point[1], point[2]])
+
+        oct_lumen = np.array(oct_points)
+
+        oct_points = []
+        for spline in saved_registered_stent:
+            spline = spline[::2]
+            for point in spline:
+                oct_points.append([point[0], point[1], point[2]])
+
+        oct_stent = np.array(oct_points)
+        
+        return oct_lumen, oct_stent 
+
     def register_OCT_frames_onto_centerline_calc(self, grouped_lumen_frames, grouped_calc_frames, centerline_registration_start, centerline_vectors,
                                             resampled_pc_centerline, OCT_registration_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
         saved_registered_splines = []
@@ -403,60 +472,7 @@ class center_line_registration:
                 registered_calc = np.array(calc_contour)
                 registered_calc = np.dot(rotation_matrix, registered_calc.T).T
                 registered_calc += translation_vector
-                saved_registered_calc.append(registered_calc)
-                if display_results:
-                    import matplotlib.pyplot as plt
-                    fig = plt.figure()
-                    ax = fig.add_subplot(111, projection='3d')
-                    # Show the plot
-                    x_filtered = []
-                    y_filtered = []
-                    z_filtered = []
-                    for frame_point in np.array(calc_contour):
-                        x_filtered.append(frame_point[0])
-                        y_filtered.append(frame_point[1])
-                        z_filtered.append(frame_point[2])
-                    ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
-                    ax.set_xlabel('Px')
-                    ax.set_ylabel('Py')
-                    ax.set_zlabel('Pz')
-                    x_filtered = []
-                    y_filtered = []
-                    z_filtered = []
-                    for frame_point in np.array(frame_points):
-                        x_filtered.append(frame_point[0])
-                        y_filtered.append(frame_point[1])
-                        z_filtered.append(frame_point[2])
-                    ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
-
-                    plt.show()
-
-                    import matplotlib.pyplot as plt
-                    fig = plt.figure()
-                    ax = fig.add_subplot(111, projection='3d')
-                    # Show the plot
-                    x_filtered = []
-                    y_filtered = []
-                    z_filtered = []
-                    for frame_points in registered_calc:
-                        x_filtered.append(frame_points[0])
-                        y_filtered.append(frame_points[1])
-                        z_filtered.append(frame_points[2])
-                    ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
-                    ax.set_xlabel('Px')
-                    ax.set_ylabel('Py')
-                    ax.set_zlabel('Pz')
-                    x_filtered = []
-                    y_filtered = []
-                    z_filtered = []
-                    for frame_points in registered_spline:
-                        x_filtered.append(frame_points[0])
-                        y_filtered.append(frame_points[1])
-                        z_filtered.append(frame_points[2])
-                    ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
-
-                    plt.show()
-            
+                saved_registered_calc.append(registered_calc)         
 
         oct_points = []
         for spline in saved_registered_splines:
@@ -473,32 +489,6 @@ class center_line_registration:
                 oct_points.append([point[0], point[1], point[2]])
 
         oct_calc = np.array(oct_points)
-
-        import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        # Show the plot
-        x_filtered = []
-        y_filtered = []
-        z_filtered = []
-        for frame_points in oct_lumen:
-            x_filtered.append(frame_points[0])
-            y_filtered.append(frame_points[1])
-            z_filtered.append(frame_points[2])
-        ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
-        ax.set_xlabel('Px')
-        ax.set_ylabel('Py')
-        ax.set_zlabel('Pz')
-        x_filtered = []
-        y_filtered = []
-        z_filtered = []
-        for frame_points in oct_calc:
-            x_filtered.append(frame_points[0])
-            y_filtered.append(frame_points[1])
-            z_filtered.append(frame_points[2])
-        ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
-
-        plt.show()
         
         return oct_lumen, oct_calc 
 
