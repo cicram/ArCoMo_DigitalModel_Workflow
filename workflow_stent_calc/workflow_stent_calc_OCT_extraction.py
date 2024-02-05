@@ -162,17 +162,69 @@ class oct_extraction:
             cv2.destroyAllWindows()  # Close the image window
 
 
-    def frames_alignment(self, contours, rotation_matrix, z_offset):
+    def frames_alignment_calc(self, contours, rotation_matrix, z_offset, height, width, conversion_factor):
         rotated_contours = []
 
+        # Calculate the center of rotation
+        center_y = (width / 2) * conversion_factor
+        center_x = (height / 2) * conversion_factor
+        
+        # adapt rotation matrix
+        extended_rotation_matrix = [angle for angle in rotation_matrix for _ in range(2)]
+
+
+        for current_contour in contours: 
+            current_contour = np.array(current_contour)
+            
+            idx = int(current_contour[0][2]/z_offset)
+
+            rot_angle = extended_rotation_matrix[idx]  # Convert the list to a numpy array
+            if current_contour is not None:
+
+                    # Translate to the center of rotation
+                current_contour[:, 0] -= center_x
+                current_contour[:, 1] -= center_y
+
+                c, s = math.cos(np.radians(rot_angle)), math.sin(np.radians(rot_angle))
+            
+                # 2D rotation matrix for x-y plane
+                rot_xy = np.array([[c, -s],
+                                [s, c]])
+                
+                # Apply rotation only to x-y coordinates
+                current_contour_xy_rotated = np.dot(current_contour[:, :2], rot_xy.T)
+                
+                # Translate back to the original position
+                current_contour_xy_rotated[:, 0] += center_x
+                current_contour_xy_rotated[:, 1] += center_y
+
+                # Combine rotated x-y coordinates with original z-values
+                current_contour_rotated = np.column_stack((current_contour_xy_rotated, current_contour[:, 2]))
+                
+                rotated_contours.append(current_contour_rotated)
+    
+        return np.array(rotated_contours)
+    
+    def frames_alignment(self, contours, rotation_matrix, z_offset, height, width, conversion_factor):
+        rotated_contours = []
+
+        # Calculate the center of rotation
+        center_y = (width / 2) * conversion_factor
+        center_x = (height / 2) * conversion_factor
+
         # Case for rotation point, would not work with other code, due to for condition
-        if len(contours) == 3:
+        if len(contours) == 3: # for registration point
                 current_contour = np.array(contours)
                 idx = int(current_contour[2]/z_offset)
                 rot_angle = rotation_matrix[idx]  # Convert the list to a numpy array
+                
                 if current_contour is not None:
+                    # Translate to the center of rotation
+                    current_contour[0] -= center_x
+                    current_contour[1] -= center_y
+
                     c, s = math.cos(np.radians(rot_angle)), math.sin(np.radians(rot_angle))
-                    
+
                     # 2D rotation matrix for x-y plane
                     rot_xy = np.array([[c, -s],
                                     [s, c]])
@@ -180,42 +232,59 @@ class oct_extraction:
                     # Apply rotation only to x-y coordinates
                     current_contour_xy_rotated = np.dot(current_contour[0:2], rot_xy.T)
                     
+                    # Translate back to the original position
+                    current_contour_xy_rotated[0] += center_x
+                    current_contour_xy_rotated[1] += center_y
+        
                     # Combine rotated x-y coordinates with original z-values
                     current_contour_rotated = [current_contour_xy_rotated[0], current_contour_xy_rotated[1], current_contour[2]]
 
                     
                     rotated_contours.append(current_contour_rotated)
         
-        #For Normal rotation
         else:
-            for current_contour in contours:
+            for current_contour in contours: # for stents
                 current_contour = np.array(current_contour)
                 if len(current_contour) == 3:
-                    idx = int(current_contour[2]*z_offset)
+                    idx = int(current_contour[2]/z_offset)
 
                     rot_angle = rotation_matrix[idx]  # Convert the list to a numpy array
                     if current_contour is not None:
+
+                        # Translate to the center of rotation
+                        current_contour[0] -= center_x
+                        current_contour[1] -= center_y
+
                         c, s = math.cos(np.radians(rot_angle)), math.sin(np.radians(rot_angle))
                         
                         # 2D rotation matrix for x-y plane
                         rot_xy = np.array([[c, -s],
                                         [s, c]])
                         
-                                            # Apply rotation only to x-y coordinates
+                    
+                    # Apply rotation only to x-y coordinates
                     current_contour_xy_rotated = np.dot(current_contour[0:2], rot_xy.T)
                     
+                    # Translate back to the original position
+                    current_contour_xy_rotated[0] += center_x
+                    current_contour_xy_rotated[1] += center_y
+
                     # Combine rotated x-y coordinates with original z-values
                     current_contour_rotated = [current_contour_xy_rotated[0], current_contour_xy_rotated[1], current_contour[2]]
                         
                     rotated_contours.append(current_contour_rotated)
                 
-                else:
-                    idx = int(current_contour[0][2]*z_offset)
-
+                else: # for normal contours
+                    idx = int(current_contour[0][2]/z_offset)
                     rot_angle = rotation_matrix[idx]  # Convert the list to a numpy array
                     if current_contour is not None:
+
+                         # Translate to the center of rotation
+                        current_contour[:, 0] -= center_x
+                        current_contour[:, 1] -= center_y
+
                         c, s = math.cos(np.radians(rot_angle)), math.sin(np.radians(rot_angle))
-                        
+                    
                         # 2D rotation matrix for x-y plane
                         rot_xy = np.array([[c, -s],
                                         [s, c]])
@@ -223,6 +292,10 @@ class oct_extraction:
                         # Apply rotation only to x-y coordinates
                         current_contour_xy_rotated = np.dot(current_contour[:, :2], rot_xy.T)
                         
+                        # Translate back to the original position
+                        current_contour_xy_rotated[:, 0] += center_x
+                        current_contour_xy_rotated[:, 1] += center_y
+
                         # Combine rotated x-y coordinates with original z-values
                         current_contour_rotated = np.column_stack((current_contour_xy_rotated, current_contour[:, 2]))
                         
@@ -457,19 +530,42 @@ class oct_extraction:
                     # Write each path to the file
                     file.write(str(path) + '\n')
 
-        return calc_contours
-        
+        # Add more frames, so interframes distance is smaller
+        calc_contours_augmented = self.process_frames(calc_contours, z_space)
+        return calc_contours_augmented
 
-    def get_stent_contours(self, input_file, OCT_start_frame, OCT_end_frame, z_space, conversion_factor):
+    def process_frames(self, frames_list, z_distance):
+        # Initialize a new list to store the modified frames
+        modified_frames = []
+
+        # Iterate through each frame in the original list
+        for frame in frames_list:
+            # Extract x, y, and z values from the frame
+            x_values = [x[0] for x in frame]
+            y_values = [y[1] for y in frame]
+            z_values = [z[2] for z in frame]
+
+           # Copy the original frame and append it to the modified_frames list
+            modified_frames.append(list(zip(x_values, y_values, z_values)))
+
+            # Copy the original frame and increment the z-value by z_value/3 and append it
+            modified_frames.append(list(zip(x_values, y_values, [z + z_distance/2 for z in z_values])))
+
+            # Copy the original frame and increment the z-value by 2 * z_value/3 and append it
+            #modified_frames.append(list(zip(x_values, y_values, [z + 2 * z_distance/3 for z in z_values])))
+
+        return modified_frames     
+
+    def get_stent_contours(self, input_file, OCT_start_frame, OCT_end_frame, crop_top, crop_bottom, z_space, conversion_factor):
         color = [255, 255, 255]
-        crop = 200
-        crop2 = 900
         points = []
         with Image.open(input_file) as im:
             for page in range(OCT_start_frame, OCT_end_frame, 1):
                 im.seek(page)  # Move to the current page (frame)
                 image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
-                open_cv_image = image[crop:crop2, :, ::-1].copy()  # Crop image at xxx pixels from top
+                image_flipped = np.flipud(image)
+                height, width, channels = image_flipped.shape
+                open_cv_image = image_flipped[crop_bottom: height-crop_top, :, ::-1].copy()  # Crop image at xxx pixels from top
 
                 # Apply the color filter
                 binary_mask = self.filter_color_one(open_cv_image, color)
@@ -492,18 +588,6 @@ class oct_extraction:
                         centroid_x_list.append(centroid_x)
                         centroid_y_list.append(centroid_y)
                         points.append([centroid_x*conversion_factor, centroid_y*conversion_factor, page*z_space])
-
-        if False:
-            # Restrcutre data accoring to z-value hight
-            grouped_data = {}
-            
-            for item in points:
-                key = round(item[2], 4)  # Rounding to handle potential floating-point precision issues
-                if key not in grouped_data:
-                    grouped_data[key] = []
-                grouped_data[key].append(tuple(item))
-            
-            result = [grouped_data[key] for key in sorted(grouped_data)]
         
         return points
     
@@ -538,9 +622,6 @@ class oct_extraction:
                 # fit a spline to the contour
                 current_contour = self.spline_fitting(threshold_mask, display_images, save_images_for_controll, page)
                 
-                if current_contour is None:
-                    print("Contour is none")
-
                 aligned_source_points = np.array(current_contour)
 
                 # Create a 3D point cloud with incremental z-coordinate and convert into mm unit.
@@ -580,16 +661,16 @@ class oct_extraction:
             cv2.waitKey()
 
         # Convert into mm unit
-        registration_point = [self.oct_registration_point_x, self.oct_registration_point_y, (OCT_registration_frame-OCT_start_frame)*z_offset]
+        registration_point = [self.oct_registration_point_x*conversion_factor, self.oct_registration_point_y*conversion_factor, (OCT_registration_frame-OCT_start_frame)*z_offset]
         return registration_point
     
 
-    def get_rotation_matrix(self, input_file):
+    def get_rotation_matrix(self, input_file, OCT_start_frame, OCT_end_frame):
         rotation_angles = []
         rotation_total = 0
         previous_image = None
         with Image.open(input_file) as im:
-            for page in range(1, 280, 1):
+            for page in range(OCT_start_frame, OCT_end_frame, 1):
                 im.seek(page)
                 image = np.array(im.convert('RGB'))
                 image_flipped = image #np.flipud(image)
@@ -618,3 +699,207 @@ class oct_extraction:
         """Calculates the root mean square error (RSME) between two images"""
         errors = np.asarray(ImageChops.difference(x, y)) / 255
         return math.sqrt(np.mean(np.square(errors)))
+
+###############################################################################################
+    def get_rotation_matrix_ICP(self, oct_lumen_contours):
+        z_coordinate = 0
+        previous_contour = None
+        rotations = []
+        total_rotations = []
+        rotation_total = 0
+        rotation = 0
+        for current_contour in oct_lumen_contours:
+            current_contour = [(x[0], x[1]) for x in current_contour]
+            if previous_contour is not None:
+                # Perform ICP alignment.
+                rotation = self.icp_alignment(current_contour, previous_contour)
+
+            previous_contour = current_contour
+            rotation_total += rotation
+            rotations.append(rotation)
+            total_rotations.append(rotation_total)
+            
+        return np.array(total_rotations)
+    
+    # Estimate rotation and translations
+    def point_based_matching(self, point_pairs):
+        """
+        This function is based on the paper "Robot Pose Estimation in Unknown Environments by Matching 2D Range Scans"
+        by F. Lu and E. Milios.
+
+        :param point_pairs: the matched point pairs [((x1, y1), (x1', y1')), ..., ((xi, yi), (xi', yi')), ...]
+        :return: the rotation angle and the 2D translation (x, y) to be applied for matching the given pairs of points
+        """
+
+        x_mean = 0
+        y_mean = 0
+        xp_mean = 0
+        yp_mean = 0
+        n = len(point_pairs)
+
+        if n == 0:
+            return None, None, None
+
+        for pair in point_pairs:
+
+            (x, y), (xp, yp) = pair
+
+            x_mean += x
+            y_mean += y
+            xp_mean += xp
+            yp_mean += yp
+
+        x_mean /= n
+        y_mean /= n
+        xp_mean /= n
+        yp_mean /= n
+
+        s_x_xp = 0
+        s_y_yp = 0
+        s_x_yp = 0
+        s_y_xp = 0
+        for pair in point_pairs:
+
+            (x, y), (xp, yp) = pair
+
+            s_x_xp += (x - x_mean)*(xp - xp_mean)
+            s_y_yp += (y - y_mean)*(yp - yp_mean)
+            s_x_yp += (x - x_mean)*(yp - yp_mean)
+            s_y_xp += (y - y_mean)*(xp - xp_mean)
+
+        rot_angle = math.atan2(s_x_yp - s_y_xp, s_x_xp + s_y_yp)
+        translation_x = xp_mean - (x_mean*math.cos(rot_angle) - y_mean*math.sin(rot_angle))
+        translation_y = yp_mean - (x_mean*math.sin(rot_angle) + y_mean*math.cos(rot_angle))
+
+        return rot_angle, translation_x, translation_y
+    
+
+    def icp_alignment(self, points, reference_points, max_iterations=100, distance_threshold=100, convergence_translation_threshold=1e-3,
+            convergence_rotation_threshold=1e-4, point_pairs_threshold=10, verbose=False):
+        """
+        An implementation of the Iterative Closest Point algorithm that matches a set of M 2D points to another set
+        of N 2D (reference) points.
+
+        :param reference_points: the reference point set as a numpy array (N x 2)
+        :param points: the point that should be aligned to the reference_points set as a numpy array (M x 2)
+        :param max_iterations: the maximum number of iteration to be executed
+        :param distance_threshold: the distance threshold between two points in order to be considered as a pair
+        :param convergence_translation_threshold: the threshold for the translation parameters (x and y) for the
+                                                transformation to be considered converged
+        :param convergence_rotation_threshold: the threshold for the rotation angle (in rad) for the transformation
+                                                to be considered converged
+        :param point_pairs_threshold: the minimum number of point pairs the should exist
+        :param verbose: whether to print informative messages about the process (default: False)
+        :return: the transformation history as a list of numpy arrays containing the rotation (R) and translation (T)
+                transformation in each iteration in the format [R | T] and the aligned points as a numpy array M x 2
+        """
+        max_rotation_flag = False
+        all_points = []
+        transformation_history = []
+        iteration_array = []
+        translation_x_mm = []
+        translation_y_mm = []
+        distance_between_points = []
+        total_rotation_degrees = 0
+        total_trans_x = 0
+        total_trans_y = 0
+        rotation_degrees = []
+        final_rotation = np.array([[ 1, 0], [ 0,  1]])
+        source_points_orig = np.copy(points)
+        nbrs = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(reference_points)
+        
+        for iter_num in range(max_iterations):
+            if verbose:
+                print('------ iteration', iter_num, '------')
+
+            closest_point_pairs = []  # list of point correspondences for closest point rule
+
+            distances, indices = nbrs.kneighbors(points)
+            for nn_index in range(len(distances)):
+                if distances[nn_index][0] < distance_threshold:
+                    closest_point_pairs.append((points[nn_index], reference_points[indices[nn_index][0]]))
+
+            # if only few point pairs, stop process
+            if verbose:
+                print('number of pairs found:', len(closest_point_pairs))
+            if len(closest_point_pairs) < point_pairs_threshold:
+                if verbose:
+                    print('No better solution can be found (very few point pairs)!')
+                break
+
+            # compute translation and rotation using point correspondences
+            closest_rot_angle, closest_translation_x, closest_translation_y = self.point_based_matching(closest_point_pairs)
+            if closest_rot_angle is not None:
+                if verbose:
+                    print('Rotation:', math.degrees(closest_rot_angle), 'degrees')
+                    print('Translation:', closest_translation_x, closest_translation_y)
+                        
+            if closest_rot_angle is None or closest_translation_x is None or closest_translation_y is None:
+                print("No better solution can be found!")
+                if verbose:
+                    print('No better solution can be found!')
+                break
+            
+            # transform 'points' (using the calculated rotation and translation)
+            c, s = math.cos(closest_rot_angle), math.sin(closest_rot_angle)
+            rot = np.array([[c, -s],
+                            [s, c]])
+            aligned_points = np.dot(points, rot.T)
+            aligned_points[:, 0] += closest_translation_x 
+            aligned_points[:, 1] += closest_translation_y
+
+            # update 'points' for the next iteration
+            points = aligned_points
+            all_points.append(np.copy(points))
+            # update transformation history
+            transformation_history.append(np.hstack((rot, np.array([[closest_translation_x], [closest_translation_y]]))))
+            
+            final_rotation = np.dot(final_rotation, rot)
+            total_trans_x += closest_translation_x
+            total_trans_y += closest_translation_y
+            total_rotation_degrees += np.degrees(closest_rot_angle)
+
+            # Compute distance between points
+            distance_between_points.append(np.mean(distances))
+
+            iteration_array.append(iter_num)
+
+            # Compute the rotation angle in radians.
+            rotation_radians = np.arctan2(rot[1, 0], rot[0, 0])
+
+            # Convert rotation angle to degrees.
+            rotation_angle_degrees = np.degrees(rotation_radians)
+            rotation_degrees.append(rotation_angle_degrees)
+
+            # Calculate translation in millimeters.
+            translation_x_mm.append(closest_translation_x)
+            translation_y_mm.append(closest_translation_y)
+            
+            # check convergence
+            if (abs(closest_rot_angle) < convergence_rotation_threshold) \
+                    and (abs(closest_translation_x) < convergence_translation_threshold) \
+                    and (abs(closest_translation_y) < convergence_translation_threshold):
+                
+                print('Converged!')
+
+                if False:
+                    # Plotting outside the loop
+                    for i, points in enumerate(all_points):
+                        plt.plot(reference_points[:,0], reference_points[:,1], color="green")
+                        plt.plot(points[:, 0], points[:, 1], color="blue")
+                        plt.title(f'Iteration: {i + 1}')
+                        plt.xlabel('X-axis')
+                        plt.ylabel('Y-axis')
+                        plt.show(block=False)
+                        plt.pause(1)
+                        # Clear the current figure to remove the previous points
+                        plt.clf()
+                    plt.show()
+                if verbose:
+                    print('Converged!')
+                
+                # Stop the ICP process
+                break
+        
+        return total_rotation_degrees
+################################################################################################

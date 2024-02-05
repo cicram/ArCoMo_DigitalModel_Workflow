@@ -53,12 +53,10 @@ class ContourDrawer:
         # Extract x and y coordinates from the path
         concatenated_path = [point for subpath in path for point in subpath]
         path_x, path_y = zip(*concatenated_path)
-        print(len(path_x))
         # Remove duplicates
         points = list(zip(path_x, path_y))
         points = list(dict.fromkeys(points))
         path_x, path_y = zip(*points)
-        print(len(path_x))
 
         try:
             # Fit a spline to the path
@@ -68,8 +66,6 @@ class ContourDrawer:
             u = np.linspace(0, 1, 500)  # Adjust the number of points as needed
             x, y = splev(u, tck)
             z_values = [z_value] * len(x)
-            plt.plot(x, y)
-            plt.show()
             # Return the fitted spline as a list of points
             return list(zip(x*conversion_factor, y*conversion_factor, z_values))
         except: 
@@ -81,6 +77,7 @@ class ContourDrawer:
 
         with Image.open(input_file) as im:
             for page in range(OCT_start_frame, OCT_end_frame, 1):
+                print(f"Current page: {page}")
                 next_slide = False
                 self.path_total = []
                 im.seek(page)  # Move to the current page (frame)

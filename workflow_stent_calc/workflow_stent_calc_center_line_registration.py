@@ -612,10 +612,12 @@ class center_line_registration:
         return oct_points 
 
 
-    def get_oct_lumen_rotation_matrix(self, resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_CT, OCT_registration_frame, z_distance, display_results):
+    def get_oct_lumen_rotation_matrix(self, blue_point, OCT_start_frame, orig_regpoint, resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_CT, OCT_registration_frame, z_distance, display_results):
         target_centerline_point = resampled_pc_centerline[centerline_registration_start]
+        blue_point_ = resampled_pc_centerline[blue_point]
+
         # find correct frame
-        registration_frame = grouped_OCT_frames[round(grouped_OCT_frames[0][0][2] - (OCT_registration_frame * z_distance), 1)]
+        registration_frame = grouped_OCT_frames[round(grouped_OCT_frames[0][0][2] - ((OCT_registration_frame - OCT_start_frame)* z_distance), 1)]
         registered_frame = np.array(registration_frame)  # Copy the frame points
 
         # Perform the translation to center the spline and registration point on the centerline point.
@@ -625,8 +627,14 @@ class center_line_registration:
         registration_point_OCT += translation_vector
         if display_results:
             plt.plot(registered_frame[:, 0], registered_frame[:, 1], "x")
-            plt.plot(registration_point_OCT[0], registration_point_OCT[1], "o")
+            plt.plot(registration_point_OCT[0], registration_point_OCT[1], "o",color="yellow")
+            plt.plot(registration_point_CT[0], registration_point_CT[1], "o", color="black")
+            plt.plot(orig_regpoint[0], orig_regpoint[1], "o", color="green")
+            plt.plot(blue_point_[0], blue_point_[1], "o", color="blue")
+            plt.plot(target_centerline_point[0], target_centerline_point[1], "o", color="red")
+
             plt.show()
+
 
         # Create vectors
         vector_oct_registration_point_ = registration_point_OCT - target_centerline_point

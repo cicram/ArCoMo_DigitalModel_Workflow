@@ -19,7 +19,7 @@ class PointCloudRegistrationPointSelectionVisualizer:
         self.ax3d = self.fig.add_subplot(111, projection='3d')
         self.legend_elements = [
             Line2D([0], [0], marker='o', color='red', label='Fitting end point', markerfacecolor='red', markersize=15),
-            Line2D([0], [0], marker='o', color='blue', label='Second point', markerfacecolor='blue', markersize=15)
+            Line2D([0], [0], marker='o', color='green', label='Second point', markerfacecolor='green', markersize=15)
         ]
         self.ax3d.legend(handles=self.legend_elements, loc="upper right")
         self.create_buttons()
@@ -28,7 +28,7 @@ class PointCloudRegistrationPointSelectionVisualizer:
         ind = event.ind[0]
         if self.move_blue_point:
             self.colors[self.selected_point_index_blue] = 'black'
-            self.colors[ind] = 'blue'
+            self.colors[ind] = 'green'
             self.selected_point_index_blue = ind
         else:
             self.colors[self.selected_point_index_red] = 'black'
@@ -66,7 +66,7 @@ class PointCloudRegistrationPointSelectionVisualizer:
             max_index = len(self.pc_centerline) - 1
             if index is None or index < max_index:
                 self.selected_point_index_blue = index + 1 if index is not None else 0
-                self.colors[self.selected_point_index_blue] = 'blue'
+                self.colors[self.selected_point_index_blue] = 'green'
                 if index is not None:
                     self.colors[index] = 'black'
                 self.view_limits = (self.ax3d.get_xlim(), self.ax3d.get_ylim(), self.ax3d.get_zlim())
@@ -86,7 +86,7 @@ class PointCloudRegistrationPointSelectionVisualizer:
             index = self.selected_point_index_blue
             if index is not None and index > 0:
                 self.selected_point_index_blue -= 1
-                self.colors[self.selected_point_index_blue] = 'blue'
+                self.colors[self.selected_point_index_blue] = 'green'
                 self.colors[self.selected_point_index_blue + 1] = 'black'
                 self.view_limits = (self.ax3d.get_xlim(), self.ax3d.get_ylim(), self.ax3d.get_zlim())
                 self.update_plot()

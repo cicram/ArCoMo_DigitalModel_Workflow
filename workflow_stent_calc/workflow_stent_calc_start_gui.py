@@ -48,6 +48,10 @@ class OCTAnalyzerGUI:
         self.conversion_factor = 1 / 103.0
         self.create_widgets()
 
+        # Define hight and width
+        self.image_hight = 1024 - self.crop_top - self.crop_bottom
+        self.image_withd = 1024
+
     def create_widgets(self):
         # Labels
         self.label_oct_registration_frame = ttk.Label(self.master, text="OCT Registration Frame:")
@@ -242,22 +246,26 @@ class OCTAnalyzerGUI:
         oct_extractor = oct_extraction()
         registration_point_OCT = oct_extractor.get_registration_point(self.input_file_OCT, self.crop_top, self.crop_bottom, self.OCT_start_frame, self.OCT_registration_frame, self.display_results, self.z_distance,
                                                                    self.save_file, self.conversion_factor)
-        
+
         # Update instructions
         instruction_text = "OCT lumen extraction and rotation is performed, please wait and check resulting plot"
         self.add_instruction_text(instruction_text)
 
         # Get rotation correction matrix
-        oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank) 
+        oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame) 
 
         # Get oct lumen contours
         oct_lumen_contours = oct_extractor.get_lumen_contour(self.crop_top, self.crop_bottom, self.input_file_OCT, self.OCT_end_frame, self.OCT_start_frame, self.OCT_registration_frame,
                                                              self.z_distance, self.conversion_factor, self.save_file, self.color1, self.color2, 
                                                              self.smoothing_kernel_size, self.threshold_value, self.display_results, self.save_images_for_controll)
-         
+        
+        #oct_rotation_angles_ICP = oct_extractor.get_rotation_matrix_ICP(oct_lumen_contours) 
+
+        #oct_rotation_angles = oct_rotation_angles_ICP
+
         # Align oct frames and registration point
-        oct_lumen_point_cloud = oct_extractor.frames_alignment(oct_lumen_contours, oct_rotation_angles, self.z_distance)
-        registration_point_OCT = oct_extractor.frames_alignment(registration_point_OCT, oct_rotation_angles, self.z_distance)
+        oct_lumen_point_cloud = oct_extractor.frames_alignment(oct_lumen_contours, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
+        registration_point_OCT = oct_extractor.frames_alignment(registration_point_OCT, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
         
         # Restructure frames
         center_line_registrator = center_line_registration()
@@ -269,7 +277,7 @@ class OCTAnalyzerGUI:
             self.add_instruction_text(instruction_text)
             calc_contours = oct_extractor.get_calc_contours(self.path_segmented_calc, self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame, self.z_distance, self.conversion_factor, self.crop_top, self.crop_bottom)
             # Align frames
-            oct_calc_point_cloud = oct_extractor.frames_alignment(calc_contours, oct_rotation_angles, self.z_distance)
+            oct_calc_point_cloud = oct_extractor.frames_alignment_calc(calc_contours, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
             # Restructure frames
             grouped_calc = center_line_registrator.restructure_point_clouds(oct_calc_point_cloud, self.OCT_start_frame, self.OCT_end_frame, self.z_distance)
 
@@ -278,9 +286,9 @@ class OCTAnalyzerGUI:
         if processing_info == STENT or processing_info == STENT_AND_CALC:
             instruction_text = "OCT stent extraction is performed"
             self.add_instruction_text(instruction_text)
-            stent_contours = oct_extractor.get_stent_contours(self.input_file_OCT_stent ,self.OCT_start_frame, self.OCT_end_frame, self.z_distance, self.conversion_factor)
+            stent_contours = oct_extractor.get_stent_contours(self.input_file_OCT_stent ,self.OCT_start_frame, self.OCT_end_frame, self.crop_top, self.crop_bottom, self.z_distance, self.conversion_factor)
             # Align frames
-            oct_stent_point_cloud = oct_extractor.frames_alignment(stent_contours, oct_rotation_angles, self.z_distance)
+            oct_stent_point_cloud = oct_extractor.frames_alignment(stent_contours, oct_rotation_angles, self.z_distance,self.image_hight, self.image_withd, self.conversion_factor)
             # Restructure frames     
             grouped_stent = center_line_registrator.restructure_point_clouds(oct_stent_point_cloud, self.OCT_start_frame, self.OCT_end_frame, self.z_distance)
 
@@ -308,7 +316,7 @@ class OCTAnalyzerGUI:
         centerline_registration_start = centerline_registration_point_selector.selected_point_index_red
         selected_registration_point_CT = np.array(centerline_registration_point_selector.selected_registration_point_CT)
 
-        oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(resampled_pc_centerline, centerline_registration_start, grouped_OCT_lumen, 
+        oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(centerline_registration_point_selector.selected_point_index_blue, self.OCT_start_frame, registration_point_CT, resampled_pc_centerline, centerline_registration_start, grouped_OCT_lumen, 
                                                                                                                           registration_point_OCT, selected_registration_point_CT, self.OCT_registration_frame, self.z_distance, self.display_results)
 
         # rotate OCT_frames
@@ -364,8 +372,7 @@ class OCTAnalyzerGUI:
             registered_oct_lumen, registered_oct_calc = center_line_registrator.register_OCT_frames_onto_centerline_calc(rotated_grouped_OCT_lumen, rotated_grouped_OCT_calc, centerline_registration_start, centerline_vectors,
                                                                                                 resampled_pc_centerline, self.OCT_registration_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
 
-        # Create CT point cloud from ply file
-        if self.display_results or True:
+        if self.display_results:
             #------------------------------------------#
             import matplotlib.pyplot as plt
             fig = plt.figure()
