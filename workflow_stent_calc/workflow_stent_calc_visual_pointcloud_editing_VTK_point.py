@@ -256,7 +256,9 @@ class point_cloud_visual_editing:
         self.fuse_point_clouds()
 
         self.render_window.Finalize()  # Finalize the render window
-        self.render_window.GetInteractor().TerminateApp() 
+        self.render_window_interactor.TerminateApp()
+        del self.render_window_interactor
+        del self.render_window       
 
     def run_editor(self, ct_points, oct_lumen, oct_calc=None, oct_stent=None):
         self.point_cloud1 = oct_lumen

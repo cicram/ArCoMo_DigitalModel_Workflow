@@ -531,8 +531,8 @@ class oct_extraction:
                     file.write(str(path) + '\n')
 
         # Add more frames, so interframes distance is smaller
-        calc_contours_augmented = self.process_frames(calc_contours, z_space)
-        return calc_contours_augmented
+        #calc_contours_augmented = self.process_frames(calc_contours, z_space)
+        return calc_contours
 
     def process_frames(self, frames_list, z_distance):
         # Initialize a new list to store the modified frames

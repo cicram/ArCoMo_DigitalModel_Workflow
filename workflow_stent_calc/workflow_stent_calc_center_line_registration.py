@@ -355,14 +355,15 @@ class center_line_registration:
 
         return rotation_matrix
     def register_OCT_frames_onto_centerline_stent(self, grouped_lumen_frames, grouped_stent_frames, centerline_registration_start, centerline_vectors,
-                                            resampled_pc_centerline, OCT_registration_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
+                                            resampled_pc_centerline, OCT_registration_frame, OCT_start_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
         saved_registered_splines = []
         saved_registered_stent = []
         z_level_preivous = None
 
         # Find start idx to know at what centerline index they have to be aligned 
         z_level_registration = round(OCT_registration_frame * z_distance, 1)
-        count = 0
+        count = OCT_start_frame
+
 
         for z_level, frame_points in grouped_lumen_frames.items():
             if z_level > z_level_registration:
@@ -424,24 +425,24 @@ class center_line_registration:
         return oct_lumen, oct_stent 
 
     def register_OCT_frames_onto_centerline_calc(self, grouped_lumen_frames, grouped_calc_frames, centerline_registration_start, centerline_vectors,
-                                            resampled_pc_centerline, OCT_registration_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
+                                            resampled_pc_centerline, OCT_registration_frame, OCT_start_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
         saved_registered_splines = []
         saved_registered_calc = []
         z_level_preivous = None
 
         # Find start idx to know at what centerline index they have to be aligned 
         z_level_registration = round(OCT_registration_frame * z_distance, 1)
-        count = 0
+        count = OCT_start_frame
 
         for z_level, frame_points in grouped_lumen_frames.items():
             if z_level > z_level_registration:
                 count += 1
 
-        closest_centerline_point_idx = centerline_registration_start - count
+        closest_centerline_point_idx = centerline_registration_start - count 
+
         # Iterate through the splines and align them on the centerline points.
         for z_level, frame_points in grouped_lumen_frames.items():
-
-            # Find the corresponding centerline point and its vector.
+           # Find the corresponding centerline point and its vector.
             if z_level_preivous is None:
                 z_level_preivous = z_level
             idx = round((z_level - z_level_preivous) / z_distance)
@@ -449,6 +450,7 @@ class center_line_registration:
             z_level_preivous = z_level
 
             target_centerline_point = resampled_pc_centerline[closest_centerline_point_idx]
+            
             normal_vector = centerline_vectors[closest_centerline_point_idx]
 
             # Calculate the transformation matrix to align the spline with the centerline point's vector.
@@ -460,19 +462,47 @@ class center_line_registration:
             # Apply the rotation to the entire frame (spline points).
             registered_spline = np.dot(rotation_matrix, registered_spline.T).T  # Apply rotation
             # Perform the translation to center the spline on the centerline point.
+            registered_spline_shift = registered_spline.mean(axis=0)
             translation_vector = target_centerline_point - registered_spline.mean(axis=0)
+
             registered_spline += translation_vector
 
             # Append the registered spline to the list
             saved_registered_splines.append(registered_spline) 
-
+        
             # Get calc at that hight if it exists
             if z_level in grouped_calc_frames:
                 calc_contour = grouped_calc_frames[z_level]
+                #calc_contour_2 = grouped_calc_frames[round(z_level-z_distance/2,1)]
+                
                 registered_calc = np.array(calc_contour)
+                #registered_calc_2 = np.array(calc_contour_2)
                 registered_calc = np.dot(rotation_matrix, registered_calc.T).T
+                #registered_calc_2 = np.dot(rotation_matrix, registered_calc_2.T).T
+                
+                # Make more interframe centerline point fro calc
+
+                registered_calc_2 = np.copy(registered_calc)
+                registered_calc_3 = np.copy(registered_calc)
+                registered_calc_4 = np.copy(registered_calc)
+                target_centerline_point_diff = target_centerline_point - resampled_pc_centerline[closest_centerline_point_idx + 1]
+                target_centerline_point_2 = target_centerline_point - target_centerline_point_diff/4
+                target_centerline_point_3 = target_centerline_point - target_centerline_point_diff/2
+                target_centerline_point_4 = target_centerline_point - target_centerline_point_diff/4 * 3
+
+                translation_vector_2 = target_centerline_point_2 - registered_spline_shift
+                translation_vector_3 = target_centerline_point_3 - registered_spline_shift
+                translation_vector_4 = target_centerline_point_4 - registered_spline_shift
+
                 registered_calc += translation_vector
-                saved_registered_calc.append(registered_calc)         
+                registered_calc_2 += translation_vector_2
+                registered_calc_3 += translation_vector_3
+                registered_calc_4 += translation_vector_4
+
+                saved_registered_calc.append(registered_calc)    
+                saved_registered_calc.append(registered_calc_2)         
+                saved_registered_calc.append(registered_calc_3)         
+                saved_registered_calc.append(registered_calc_4)         
 
         oct_points = []
         for spline in saved_registered_splines:
@@ -493,7 +523,7 @@ class center_line_registration:
         return oct_lumen, oct_calc 
 
     def register_OCT_frames_onto_centerline(self, grouped_OCT_frames, centerline_registration_start, centerline_vectors,
-                                            resampled_pc_centerline, OCT_registration_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
+                                            resampled_pc_centerline, OCT_registration_frame, OCT_start_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
         saved_registered_splines = []
         rotated_vectors = []
         target_centerline_point_display = []
@@ -501,7 +531,7 @@ class center_line_registration:
         z_level_preivous = None
         # Find start idx to know at what centerline index they have to be aligned 
         z_level_registration = round(OCT_registration_frame * z_distance, 1)
-        count = 0
+        count = OCT_start_frame
         if False:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
