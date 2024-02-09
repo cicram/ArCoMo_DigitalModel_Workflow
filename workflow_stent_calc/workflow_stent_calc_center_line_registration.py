@@ -354,6 +354,7 @@ class center_line_registration:
 
 
         return rotation_matrix
+    
     def register_OCT_frames_onto_centerline_stent(self, grouped_lumen_frames, grouped_stent_frames, centerline_registration_start, centerline_vectors,
                                             resampled_pc_centerline, OCT_registration_frame, OCT_start_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
         saved_registered_splines = []
@@ -532,23 +533,6 @@ class center_line_registration:
         # Find start idx to know at what centerline index they have to be aligned 
         z_level_registration = round(OCT_registration_frame * z_distance, 1)
         count = OCT_start_frame
-        if False:
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            # Show the plot
-            x_filtered = []
-            y_filtered = []
-            z_filtered = []
-            for z_level, frame_points in grouped_OCT_frames.items():
-                for i, data in enumerate(frame_points):
-                    x_filtered.append(frame_points[i][0])
-                    y_filtered.append(frame_points[i][1])
-                    z_filtered.append(frame_points[i][2])
-                print("z_level: "+str(z_level))
-                print("z_visual: "+str(frame_points[0][2]))
-
-            ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
-            plt.show()
 
         for z_level, frame_points in grouped_OCT_frames.items():
             if z_level > z_level_registration:

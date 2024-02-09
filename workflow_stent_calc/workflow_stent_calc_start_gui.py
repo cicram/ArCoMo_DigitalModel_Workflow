@@ -5,6 +5,8 @@ from workflow_stent_calc_center_line_registration import center_line_registratio
 from workflow_stent_calc_visual_pointcloud_editing_VTK_point import point_cloud_visual_editing
 from workflow_stent_calc_center_line_smooting_gui import PointCloudSmoothingVisualizer
 from workflow_stent_calc_center_line_registration_point_selection_GUI import PointCloudRegistrationPointSelectionVisualizer
+from workflow_stent_calc_image_visualization_on_model import OctImageVisualizier
+
 import open3d as o3d
 import tkinter as tk
 import numpy as np
@@ -360,6 +362,10 @@ class OCTAnalyzerGUI:
             plt.show()
             #------------------------------------------#
 
+        #######################################################################
+        image_visualizer = OctImageVisualizier()
+        image_visualizer.visualize_images(self.input_file_OCT, centerline_vectors, rotated_grouped_OCT_lumen, centerline_registration_start, resampled_pc_centerline, oct_lumen_rotation_matrix, oct_rotation_angles, self.OCT_start_frame, self.OCT_end_frame, self.OCT_registration_frame, self.crop_bottom, self.crop_top, self.conversion_factor, self.z_distance)
+        ####################################################################### 
 
         #register frames onto centerline
         if processing_info == BASIC:
