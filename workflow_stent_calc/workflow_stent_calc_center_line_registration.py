@@ -362,8 +362,8 @@ class center_line_registration:
         z_level_preivous = None
 
         # Find start idx to know at what centerline index they have to be aligned 
-        z_level_registration = round(OCT_registration_frame * z_distance, 1)
-        count = OCT_start_frame
+        z_level_registration = round((OCT_registration_frame - OCT_start_frame) * z_distance, 1)
+        count = 0
 
 
         for z_level, frame_points in grouped_lumen_frames.items():
@@ -432,8 +432,8 @@ class center_line_registration:
         z_level_preivous = None
 
         # Find start idx to know at what centerline index they have to be aligned 
-        z_level_registration = round(OCT_registration_frame * z_distance, 1)
-        count = OCT_start_frame
+        z_level_registration = round((OCT_registration_frame - OCT_start_frame) * z_distance, 1)
+        count = 0
 
         for z_level, frame_points in grouped_lumen_frames.items():
             if z_level > z_level_registration:
@@ -531,8 +531,8 @@ class center_line_registration:
         orig_frames = []
         z_level_preivous = None
         # Find start idx to know at what centerline index they have to be aligned 
-        z_level_registration = round(OCT_registration_frame * z_distance, 1)
-        count = OCT_start_frame
+        z_level_registration = round((OCT_registration_frame - OCT_start_frame) * z_distance, 1)
+        count = 0
 
         for z_level, frame_points in grouped_OCT_frames.items():
             if z_level > z_level_registration:
@@ -551,12 +551,13 @@ class center_line_registration:
             normal_vector = centerline_vectors[closest_centerline_point_idx]
 
             # Calculate the transformation matrix to align the spline with the centerline point's vector.
-            source_normal_vector = np.array([0, 0, -1])
+            print("change normal vector to 0, 0, -1")
+            source_normal_vector = np.array([0, 0, 1])
 
             rotation_matrix = self.rotation_matrix_from_vectors(source_normal_vector, normal_vector)
 
             registered_spline = np.array(frame_points)  # Copy the spline points
-            z_visual = frame_points[0][2]
+
             # Apply the rotation to the entire frame (spline points).
             registered_spline = np.dot(rotation_matrix, registered_spline.T).T  # Apply rotation
 

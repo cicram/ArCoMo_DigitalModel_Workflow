@@ -36,7 +36,7 @@ class OCTAnalyzerGUI:
         self.color1 = (0, 255, 0)  # Green circle
         self.color2 = (192, 220, 192)  # Circle dots color
         # Initialize the z-coordinate for the first image
-        self.z_distance = 0.2  # Increment by 0.2 or 0.1mm
+        self.z_distance = 0.1  # Increment by 0.2 or 0.1mm
 
         # smoothing kernel size and threshold value
         self.smoothing_kernel_size = 15  # Adjust as needed
@@ -254,21 +254,24 @@ class OCTAnalyzerGUI:
         self.add_instruction_text(instruction_text)
 
         # Get rotation correction matrix
-        oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame) 
+        print("uncomment me")
+        #oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame) 
 
         # Get oct lumen contours
         oct_lumen_contours = oct_extractor.get_lumen_contour(self.crop_top, self.crop_bottom, self.input_file_OCT, self.OCT_end_frame, self.OCT_start_frame, self.OCT_registration_frame,
                                                              self.z_distance, self.conversion_factor, self.save_file, self.color1, self.color2, 
                                                              self.smoothing_kernel_size, self.threshold_value, self.display_results, self.save_images_for_controll)
-        
-        #oct_rotation_angles_ICP = oct_extractor.get_rotation_matrix_ICP(oct_lumen_contours) 
 
-        #oct_rotation_angles = oct_rotation_angles_ICP
+        #oct_rotation_angles_ICP = oct_extractor.get_rotation_matrix_ICP(oct_lumen_contours, self.z_distance) 
+
+        oct_rotation_angles_overlap = oct_extractor.get_rotation_matrix_overlap(oct_lumen_contours, self.z_distance, self.crop_top, self.crop_bottom) 
+        
+        oct_rotation_angles = oct_rotation_angles_overlap
 
         # Align oct frames and registration point
         oct_lumen_point_cloud = oct_extractor.frames_alignment(oct_lumen_contours, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
         registration_point_OCT = oct_extractor.frames_alignment(registration_point_OCT, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
-        
+     
         # Restructure frames
         center_line_registrator = center_line_registration()
         grouped_OCT_lumen = center_line_registrator.restructure_point_clouds(oct_lumen_point_cloud, self.OCT_start_frame, self.OCT_end_frame, self.z_distance)
@@ -329,8 +332,7 @@ class OCTAnalyzerGUI:
 
         if processing_info == CALC or processing_info == STENT_AND_CALC:
             rotated_grouped_OCT_calc = center_line_registrator.rotate_frames(grouped_calc, oct_lumen_rotation_matrix, self.display_results)
-
-
+      
         if self.display_results:
             #------------------------------------------#
             import matplotlib.pyplot as plt
@@ -363,8 +365,8 @@ class OCTAnalyzerGUI:
             #------------------------------------------#
 
         #######################################################################
-        image_visualizer = OctImageVisualizier()
-        image_visualizer.visualize_images(self.input_file_OCT, centerline_vectors, rotated_grouped_OCT_lumen, centerline_registration_start, resampled_pc_centerline, oct_lumen_rotation_matrix, oct_rotation_angles, self.OCT_start_frame, self.OCT_end_frame, self.OCT_registration_frame, self.crop_bottom, self.crop_top, self.conversion_factor, self.z_distance)
+        #image_visualizer = OctImageVisualizier()
+        #image_visualizer.visualize_images(self.input_file_OCT, centerline_vectors, rotated_grouped_OCT_lumen, centerline_registration_start, resampled_pc_centerline, oct_lumen_rotation_matrix, oct_rotation_angles, self.OCT_start_frame, self.OCT_end_frame, self.OCT_registration_frame, self.crop_bottom, self.crop_top, self.conversion_factor, self.z_distance)
         ####################################################################### 
 
         #register frames onto centerline
@@ -415,7 +417,7 @@ class OCTAnalyzerGUI:
         mesh = o3d.io.read_triangle_mesh(self.input_file_ct_mesh)
 
         # Decimate the mesh (optional)
-        mesh = mesh.simplify_quadric_decimation(target_number_of_triangles=100000)
+        mesh = mesh.simplify_quadric_decimation(target_number_of_triangles=100000)   #100000
 
         # Create a regular point cloud from the mesh with a smaller voxel size
         voxel_size = 0.05  # Adjust this value to control point density (smaller values = denser point cloud)
@@ -432,7 +434,7 @@ class OCTAnalyzerGUI:
         # Visual point cloud editing:
         point_cloud_visual_editior = point_cloud_visual_editing()
         point_cloud_visual_editior.run_editor(ct_points, registered_oct_lumen)
-    
+
         # Save the fused point cloud to a text file
         point_cloud_save = point_cloud_visual_editior.fused_point_cloud
         np.savetxt(self.path_fused_point_cloud, point_cloud_save, fmt='%f %f %f')

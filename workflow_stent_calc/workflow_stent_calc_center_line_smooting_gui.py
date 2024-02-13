@@ -48,8 +48,7 @@ class PointCloudSmoothingVisualizer:
                         data.append((px, py, pz))
                     if parts[0]=="Px" and parts[1]=="Py" and parts[2]=="Pz":
                         flag_header = True
-                    
-
+                
         data = np.array(data)
         return data
 

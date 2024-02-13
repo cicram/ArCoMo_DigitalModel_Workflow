@@ -68,15 +68,15 @@ class OctImageVisualizier:
         # Registration rotation
         rotated_points = np.array(rotated_points)
         rotated_points = np.dot(rotated_points, oct_lumen_rotation_matrix.T)
-
+        
         ####################################################################
         saved_registered_splines = []
         registered_points = []
 
         z_level_preivous = None
         # Register frames onto centerline
-        z_level_registration = round(OCT_registration_frame * z_offset, 1)
-        count = OCT_start_frame
+        z_level_registration = round((OCT_registration_frame - OCT_start_frame) * z_offset, 1)
+        count = 0
 
         for z_level, frame_points in rotated_grouped_OCT_lumen.items():
             if z_level > z_level_registration:
@@ -90,6 +90,7 @@ class OctImageVisualizier:
 
             closest_centerline_point_idx += round((z_level - z_level_preivous) / z_offset)
             z_level_preivous = z_level
+
 
             target_centerline_point = center_line[closest_centerline_point_idx]
             normal_vector = centerline_vectors[closest_centerline_point_idx]
@@ -111,8 +112,10 @@ class OctImageVisualizier:
             # Append the registered spline to the list
             saved_registered_splines.append(registered_spline)
             
-            # Finc correct image
-            points_to_register = rotated_points[0]
+            # Apply registration to image
+            z_level_frames = frame_points[0][2]
+            index = round(z_level_frames/z_offset) # reason: order is in reverse (top to down, image interated dwon to top) (due to restructering of grouped frames)
+            points_to_register = rotated_points[index]
             points_to_register = np.dot(rotation_matrix, points_to_register.T).T  # Apply rotation
             points_to_register += translation_vector
             registered_points.append(points_to_register)
@@ -134,8 +137,16 @@ class OctImageVisualizier:
 
     
         with Image.open(input_file) as im:
-            for page in range(OCT_start_frame, OCT_start_frame + 1, 1):
-                im.seek(page)  # Move to the current page (frame)
+            image_diff = OCT_end_frame - OCT_start_frame
+            print(image_diff)
+            iter = 1
+            for page in range(OCT_start_frame, OCT_end_frame, 1):
+                ##################################################
+                inverse_page = OCT_start_frame + image_diff - iter
+                print(inverse_page)
+                im.seek(inverse_page)  # Get coorect page here
+                iter += 1
+                ####################################################
                 image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
                 image_flipped = np.flipud(image)
                 height, width, channels = image_flipped.shape
@@ -144,49 +155,116 @@ class OctImageVisualizier:
                 height, width = gray_image.shape
                 
                 # Set here, what pages should be shown
-                page_to_show = [119, 120, 121, 122, 123]
-                # Get spline points that where extracted from the image
-                if page in page_to_show:
-                    z_level = round((page-OCT_start_frame)/z_offset,1)
-                    spline_plot = rotated_grouped_OCT_lumen[z_level]
-                    
-                # Create a VTK structured grid
-                structured_grid = vtk.vtkStructuredGrid()
-                structured_grid.SetDimensions(gray_image.shape[1], gray_image.shape[0], 1)
+                page_to_show = [OCT_registration_frame]
 
-                points = vtk.vtkPoints()
-                colors = vtk.vtkUnsignedCharArray()
-                colors.SetNumberOfComponents(3)  # RGB has three components
-                colors.SetName("Colors")
+                if inverse_page in page_to_show:
+                    index_image = page - OCT_start_frame # reason: order is in reverse (top to down, image interated dwon to top) (due to restructering of grouped frames)
+                    registered_points_plot = registered_points[index_image]
+                    spline_plot = saved_registered_splines[index_image]
 
-                for i in range(height):
-                    for j in range(width):
-                        points.InsertNextPoint(registered_points[0][i * width + j])
-                        #points.InsertNextPoint(rotated_points[(height - i - 1) * width + (width - j - 1)])
-                        rgb_values = open_cv_image[i, j]
-                        colors.InsertNextTuple3(rgb_values[2], rgb_values[1], rgb_values[0])
+                    # Create a VTK structured grid
+                    structured_grid = vtk.vtkStructuredGrid()
+                    structured_grid.SetDimensions(gray_image.shape[1], gray_image.shape[0], 1)
 
-                # Set the points and scalars for the structured grid
-                structured_grid.SetPoints(points)
-                structured_grid.GetPointData().SetScalars(colors)
+                    points = vtk.vtkPoints()
+                    colors = vtk.vtkUnsignedCharArray()
+                    colors.SetNumberOfComponents(3)  # RGB has three components
+                    colors.SetName("Colors")
 
-                # Create a VTK mapper for the structured grid
-                mapper = vtk.vtkDataSetMapper()
-                mapper.SetInputData(structured_grid)
-                mapper.ScalarVisibilityOn()
-                mapper.SetScalarModeToUsePointData()
-                mapper.SetScalarRange(0, 255)  # Set the range of grayscale values
+                    for i in range(height):
+                        for j in range(width):
+                            points.InsertNextPoint(registered_points_plot[i * width + j])
+                            #points.InsertNextPoint(rotated_points[(height - i - 1) * width + (width - j - 1)])
+                            rgb_values = open_cv_image[i, j]
+                            colors.InsertNextTuple3(rgb_values[2], rgb_values[1], rgb_values[0])
 
-                # Create a VTK actor for the structured grid
-                actor = vtk.vtkActor()
-                actor.SetMapper(mapper)
+                    # Set the points and scalars for the structured grid
+                    structured_grid.SetPoints(points)
+                    structured_grid.GetPointData().SetScalars(colors)
 
-                # Add the actor to the renderer
-                renderer.AddActor(actor)
+                    # Create a VTK mapper for the structured grid
+                    mapper = vtk.vtkDataSetMapper()
+                    mapper.SetInputData(structured_grid)
+                    mapper.ScalarVisibilityOn()
+                    mapper.SetScalarModeToUsePointData()
+                    mapper.SetScalarRange(0, 255)  # Set the range of grayscale values
 
+                    # Create a VTK actor for the structured grid
+                    actor = vtk.vtkActor()
+                    actor.SetMapper(mapper)
+
+                    # Add the actor to the renderer
+                    renderer.AddActor(actor)
+
+                    if False:
+                        points__ = vtk.vtkPoints()
+                        for point_frame in spline_plot:
+                            points__.InsertNextPoint(point_frame)
+
+                        polydata = vtk.vtkPolyData()
+                        polydata.SetPoints(points__)
+
+                        # Create a sphere for the points
+                        sphere_source = vtk.vtkSphereSource()
+                        sphere_source.SetRadius(0.05)  # Set the radius of the sphere
+                        sphere_source.SetThetaResolution(10)
+                        sphere_source.SetPhiResolution(10)
+
+                        # Create a glyph filter to associate the sphere with each point
+                        glyph = vtk.vtkGlyph3D()
+                        glyph.SetInputData(polydata)
+                        glyph.SetSourceConnection(sphere_source.GetOutputPort())
+                        glyph.SetScaleModeToScaleByScalar()
+                        glyph.SetScaleFactor(1.0)  # Set the scale factor for the spheres
+
+                        # Create a mapper for the polydata
+                        mapper = vtk.vtkPolyDataMapper()
+                        mapper.SetInputConnection(glyph.GetOutputPort())
+
+                        # Create a VTK actor for the polydata
+                        actor_centerline = vtk.vtkActor()
+                        actor_centerline.SetMapper(mapper)
+                        actor_centerline.GetProperty().SetColor(1.0, 0.0, 0.0)  # Set color to red
+
+                        # Add the actor to the renderer
+                        renderer.AddActor(actor_centerline)
+
+                        points__ = vtk.vtkPoints()
+                        for point_frame in center_line:
+                            points__.InsertNextPoint(point_frame)
+
+                        polydata = vtk.vtkPolyData()
+                        polydata.SetPoints(points__)
+
+                        # Create a sphere for the points
+                        sphere_source = vtk.vtkSphereSource()
+                        sphere_source.SetRadius(0.05)  # Set the radius of the sphere
+                        sphere_source.SetThetaResolution(10)
+                        sphere_source.SetPhiResolution(10)
+
+                        # Create a glyph filter to associate the sphere with each point
+                        glyph = vtk.vtkGlyph3D()
+                        glyph.SetInputData(polydata)
+                        glyph.SetSourceConnection(sphere_source.GetOutputPort())
+                        glyph.SetScaleModeToScaleByScalar()
+                        glyph.SetScaleFactor(1.0)  # Set the scale factor for the spheres
+
+                        # Create a mapper for the polydata
+                        mapper = vtk.vtkPolyDataMapper()
+                        mapper.SetInputConnection(glyph.GetOutputPort())
+
+                        # Create a VTK actor for the polydata
+                        actor_centerline = vtk.vtkActor()
+                        actor_centerline.SetMapper(mapper)
+                        actor_centerline.GetProperty().SetColor(1.0, 1.0, 0.0)  # Set color to red
+
+                        # Add the actor to the renderer
+                        renderer.AddActor(actor_centerline)
+
+        ################### to be removed plots all splines
+            for spline_plot in saved_registered_splines:    
                 points__ = vtk.vtkPoints()
-                for point_frame in saved_registered_splines[0]:
-                    #point_frame[2] -= 0.8
+                for point_frame in spline_plot:
                     points__.InsertNextPoint(point_frame)
 
                 polydata = vtk.vtkPolyData()
@@ -248,6 +326,9 @@ class OctImageVisualizier:
 
                 # Add the actor to the renderer
                 renderer.AddActor(actor_centerline)
+    ################### to be removed plots all splines
+
+        
         if False:            
             # Registration point CT
             points_ct_reg = vtk.vtkPoints()

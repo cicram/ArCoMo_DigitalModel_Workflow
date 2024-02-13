@@ -573,21 +573,22 @@ class oct_extraction:
             # Find contours in the binary mask
                 contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-                # Create lists to store x and y coordinates of centroids
-                centroid_x_list = []
-                centroid_y_list = []
-                # Iterate through each contour
-                for contour in contours:
-                    # Calculate the centroid of the contour
-                    M = cv2.moments(contour)
-                    if M["m00"] != 0:
-                        centroid_x = int(M["m10"] / M["m00"])
-                        centroid_y = int(M["m01"] / M["m00"])
+                if contours is not None:
+                    # Create lists to store x and y coordinates of centroids
+                    centroid_x_list = []
+                    centroid_y_list = []
+                    # Iterate through each contour
+                    for contour in contours:
+                        # Calculate the centroid of the contour
+                        M = cv2.moments(contour)
+                        if M["m00"] != 0:
+                            centroid_x = int(M["m10"] / M["m00"])
+                            centroid_y = int(M["m01"] / M["m00"])
 
-                        # Append centroid coordinates to lists
-                        centroid_x_list.append(centroid_x)
-                        centroid_y_list.append(centroid_y)
-                        points.append([centroid_x*conversion_factor, centroid_y*conversion_factor, page*z_space])
+                            # Append centroid coordinates to lists
+                            centroid_x_list.append(centroid_x)
+                            centroid_y_list.append(centroid_y)
+                            points.append([centroid_x*conversion_factor, centroid_y*conversion_factor, (page - OCT_start_frame)*z_space])
         
         return points
     
@@ -622,13 +623,15 @@ class oct_extraction:
                 # fit a spline to the contour
                 current_contour = self.spline_fitting(threshold_mask, display_images, save_images_for_controll, page)
                 
-                aligned_source_points = np.array(current_contour)
+                if current_contour is not None:
+                    aligned_source_points = np.array(current_contour)
 
-                # Create a 3D point cloud with incremental z-coordinate and convert into mm unit.
-                point_cloud_current = [(xi * conversion_factor, yi * conversion_factor, z_coordinate) for xi, yi in
-                                    aligned_source_points]                 
-                
-                point_cloud.append(point_cloud_current)
+                    
+                    # Create a 3D point cloud with incremental z-coordinate and convert into mm unit.
+                    point_cloud_current = [(xi * conversion_factor, yi * conversion_factor, z_coordinate) for xi, yi in
+                                        aligned_source_points]                 
+                    
+                    point_cloud.append(point_cloud_current)
 
                 z_coordinate += z_offset  # Increment z-coordinate
 
@@ -701,23 +704,44 @@ class oct_extraction:
         return math.sqrt(np.mean(np.square(errors)))
 
 ###############################################################################################
-    def get_rotation_matrix_ICP(self, oct_lumen_contours):
-        z_coordinate = 0
+    def get_rotation_matrix_ICP(self, oct_lumen_contours, z_distance):
         previous_contour = None
         rotations = []
         total_rotations = []
         rotation_total = 0
         rotation = 0
+        z_previous = 0
+        flag = True
         for current_contour in oct_lumen_contours:
-            current_contour = [(x[0], x[1]) for x in current_contour]
-            if previous_contour is not None:
-                # Perform ICP alignment.
-                rotation = self.icp_alignment(current_contour, previous_contour)
-
-            previous_contour = current_contour
-            rotation_total += rotation
-            rotations.append(rotation)
-            total_rotations.append(rotation_total)
+            z_current = current_contour[0][2]
+            while True:
+                z_diff = z_current - z_previous
+                current_contour = [(x[0], x[1]) for x in current_contour]
+                
+                if (z_diff) < (z_distance + 0.01):
+                    if previous_contour is not None:
+                        flag = False
+                        # Perform ICP alignment.
+                        rotation = self.icp_alignment(current_contour, previous_contour)
+                        previous_contour = current_contour
+                        rotation_total += rotation
+                        rotations.append(rotation)
+                        total_rotations.append(rotation_total)
+                        z_previous = z_current
+                        break
+                    else:
+                        previous_contour = current_contour
+                        rotation = 0
+                        rotation_total += rotation
+                        rotations.append(rotation)
+                        total_rotations.append(rotation_total)
+                        break
+                else:
+                    z_previous += z_distance
+                    rotation = 0
+                    rotation_total += rotation
+                    rotations.append(rotation)
+                    total_rotations.append(rotation_total)
             
         return np.array(total_rotations)
     
@@ -903,3 +927,101 @@ class oct_extraction:
         
         return total_rotation_degrees
 ################################################################################################
+    
+    def get_rotation_matrix_overlap(self, oct_lumen_contours, z_distance, crop_top, crop_bottom):
+        height = (1024 - crop_top - crop_bottom)
+        width = 1024
+        center_x = round(height/2)
+        center_y = width/2
+        previous_contour = None
+        rotations = []
+        total_rotations = []
+        rotation_total = 0
+        rotation = 0
+        z_previous = 0
+
+        for current_contour in oct_lumen_contours:
+            max_overlap = 0
+            z_current = current_contour[0][2]
+            while True:
+                z_diff = z_current - z_previous
+                current_contour = [(x[0], x[1]) for x in current_contour]
+                
+                if (z_diff) < (z_distance + 0.01):
+                    if previous_contour is not None:
+                        # Perform overlap measurements.
+                        for angle in range(-30, 31):
+                            overlap = self.calculate_overlap(current_contour, previous_contour, angle/10, center_x, center_y, height, width)
+                            if overlap > max_overlap:
+                                max_overlap = overlap
+                                rotation = angle/10
+                        overlap = self.calculate_overlap(current_contour, previous_contour, rotation, center_x, center_y, height, width, True)
+                        print(f'rotation = {rotation}')
+                        previous_contour = current_contour
+                        rotation_total += rotation
+                        rotations.append(rotation)
+                        total_rotations.append(rotation_total)
+                        z_previous = z_current
+                        break
+                    else:
+                        previous_contour = current_contour
+                        rotation = 0
+                        rotation_total += rotation
+                        rotations.append(rotation)
+                        total_rotations.append(rotation_total)
+                        break
+                else:
+                    z_previous += z_distance
+                    rotation = 0
+                    rotation_total += rotation
+                    rotations.append(rotation)
+                    total_rotations.append(rotation_total)
+            
+        return np.array(total_rotations)
+        
+
+    def calculate_overlap(self, current_contour, previous_contour, rotation_angle, center_x, center_y, height, width, plot=False):
+        # Rotate the current contour around the fixed center point (512, 512)
+        rotated_contour = self.rotate_contour(current_contour, center_x, center_y, rotation_angle)
+
+        if plot:
+            plt.plot(rotated_contour[0], [1], 'o', color="red")
+            plt.plot(current_contour[0], [1], 'x', color="blue")
+            plt.plot(previous_contour[0], [1], 'x', color="black")
+
+
+        # Create blank images to store the intersection
+        image_current = np.zeros((height, width), dtype=np.uint8)
+        image_previous = np.zeros((height, width), dtype=np.uint8)
+        
+        previous_contour =  [(int(x), int(y)) for x, y in previous_contour]
+
+        # Draw the contours on the images
+        cv2.drawContours(image_current, [rotated_contour], 0, 255, -1)
+        cv2.drawContours(image_previous, [previous_contour], 0, 255, -1)
+
+        # Find the intersection (common area)
+        intersection = cv2.bitwise_and(image_current, image_previous)
+        cv2.imshow("intersection", intersection)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        # Calculate the area of the intersection
+        area_intersection = cv2.contourArea(intersection)
+
+        return area_intersection
+
+    def rotate_contour(self, contour, center_x, center_y, angle_degrees):
+        # Convert angle to radians
+        angle_radians = np.deg2rad(angle_degrees)
+
+        # Create a rotation matrix
+        rotation_matrix = cv2.getRotationMatrix2D((center_x, center_y), angle_degrees, 1)
+
+        # Apply rotation to each point in the contour
+        rotated_contour = []
+        for point in contour:
+            rotated_point = np.dot(rotation_matrix, [point[0], point[1], 1])
+            rotated_contour.append((rotated_point[0], rotated_point[1]))
+
+        return [(int(x), int(y)) for x, y in rotated_contour]
+###############################################################################################
