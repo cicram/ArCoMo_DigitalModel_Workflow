@@ -16,6 +16,9 @@ STENT_AND_CALC = 3
 STENT = 2
 CALC = 1
 BASIC = 0
+IMAGE = "Image"
+ICP = "ICP"
+OVERLAP = "Overlap"
 
 class OCTAnalyzerGUI:
     def __init__(self, master):
@@ -30,7 +33,8 @@ class OCTAnalyzerGUI:
         self.oct_end = 100
         self.arcomo_number = 0
         self.processing_info = 0 # 0 is basic processing, 1 is calc processing, 2 is stent processing, 3 is full processing
-        
+        self.axial_twist_correction_method = "" # 0 is basic processing, 1 is calc processing, 2 is stent processing, 3 is full processing
+
 
         # Parameters
         self.color1 = (0, 255, 0)  # Green circle
@@ -67,6 +71,12 @@ class OCTAnalyzerGUI:
         self.entry_oct_end = ttk.Entry(self.master)
         self.entry_arcomo_number = ttk.Entry(self.master)
 
+        # Dropdown Box for Correction Method
+        self.correction_method_var = tk.StringVar()
+        self.correction_method_dropdown = ttk.Combobox(self.master, textvariable=self.correction_method_var, 
+                                                        values=["Image", "ICP", "Overlap"])
+        self.correction_method_var.set("Image")
+        
         # Checkboxes
         self.save_intermediate_steps_var = tk.IntVar()
         self.check_save_intermediate_steps = ttk.Checkbutton(self.master,
@@ -97,7 +107,7 @@ class OCTAnalyzerGUI:
         #self.instructions_text_widget.configure(state=tk.DISABLED)  # Make the text widget read-only
         self.instructions_label.grid(row=10, column=0, columnspan=2, padx=10, pady=5, sticky="w")
         self.instructions_text_widget.grid(row=11, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-
+        self.label_correction_method = ttk.Label(self.master, text="Axial Twist Correction Method:")
 
         # Layout
         self.label_arcomo_number.grid(row=0, column=0, padx=10, pady=5, sticky="w")
@@ -113,14 +123,17 @@ class OCTAnalyzerGUI:
 
         self.label_oct_registration_frame.grid(row=4, column=0, padx=10, pady=5, sticky="w")
         self.entry_oct_registration_frame.grid(row=4, column=1, padx=10, pady=5)
+        
+        self.label_correction_method.grid(row=5, column=0, padx=10, pady=5, sticky="w")
+        self.correction_method_dropdown.grid(row=5, column=1, padx=10, pady=5)
 
-        self.check_include_calc.grid(row=5, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_include_calc.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky="w")
         self.check_include_stent.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.check_save_intermediate_steps.grid(row=7, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        self.check_display_intermediate_results.grid(row=8, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_save_intermediate_steps.grid(row=8, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_display_intermediate_results.grid(row=9, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.run_button.grid(row=9, column=0, columnspan=2, pady=10)
+        self.run_button.grid(row=10, column=0, columnspan=2, pady=10)
 
     def add_instruction_text(self, instruction_text):
         self.instructions_text_widget.configure(state=tk.NORMAL)
@@ -175,7 +188,7 @@ class OCTAnalyzerGUI:
         self.display_intermediate_results = self.display_intermediate_results_var.get()
         self.include_calc = self.include_calc_var.get()
         self.include_stent = self.include_stent_var.get()
-
+        self.axial_twist_correction_method = self.correction_method_var.get()
                 #ArCoMo number
         self.arcomo_number = int(self.arcomo_number)
 
@@ -253,20 +266,25 @@ class OCTAnalyzerGUI:
         instruction_text = "OCT lumen extraction and rotation is performed, please wait and check resulting plot"
         self.add_instruction_text(instruction_text)
 
-        # Get rotation correction matrix
-        print("uncomment me")
-        #oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame) 
-
         # Get oct lumen contours
         oct_lumen_contours = oct_extractor.get_lumen_contour(self.crop_top, self.crop_bottom, self.input_file_OCT, self.OCT_end_frame, self.OCT_start_frame, self.OCT_registration_frame,
                                                              self.z_distance, self.conversion_factor, self.save_file, self.color1, self.color2, 
                                                              self.smoothing_kernel_size, self.threshold_value, self.display_results, self.save_images_for_controll)
 
-        #oct_rotation_angles_ICP = oct_extractor.get_rotation_matrix_ICP(oct_lumen_contours, self.z_distance) 
+        # Get rotation correction matrix
+        if self.axial_twist_correction_method == IMAGE:
+            oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame) 
 
-        oct_rotation_angles_overlap = oct_extractor.get_rotation_matrix_overlap(oct_lumen_contours, self.z_distance, self.crop_top, self.crop_bottom) 
+        if self.axial_twist_correction_method == ICP:
+            oct_rotation_angles = oct_extractor.get_rotation_matrix_ICP(oct_lumen_contours, self.z_distance) 
+
+        if self.axial_twist_correction_method == OVERLAP:
+            oct_rotation_angles = oct_extractor.get_rotation_matrix_overlap(oct_lumen_contours, self.z_distance, self.crop_top, self.crop_bottom, self.conversion_factor) 
         
-        oct_rotation_angles = oct_rotation_angles_overlap
+
+        import  matplotlib.pyplot as plt
+        plt.plot(oct_rotation_angles)
+        plt.show()
 
         # Align oct frames and registration point
         oct_lumen_point_cloud = oct_extractor.frames_alignment(oct_lumen_contours, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)

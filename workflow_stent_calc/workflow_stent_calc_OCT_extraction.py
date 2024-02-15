@@ -928,10 +928,10 @@ class oct_extraction:
         return total_rotation_degrees
 ################################################################################################
     
-    def get_rotation_matrix_overlap(self, oct_lumen_contours, z_distance, crop_top, crop_bottom):
+    def get_rotation_matrix_overlap(self, oct_lumen_contours, z_distance, crop_top, crop_bottom, conversion_factor):
         height = (1024 - crop_top - crop_bottom)
         width = 1024
-        center_x = round(height/2)
+        center_x = width/2
         center_y = width/2
         previous_contour = None
         rotations = []
@@ -951,11 +951,11 @@ class oct_extraction:
                     if previous_contour is not None:
                         # Perform overlap measurements.
                         for angle in range(-30, 31):
-                            overlap = self.calculate_overlap(current_contour, previous_contour, angle/10, center_x, center_y, height, width)
+                            overlap = self.calculate_overlap(current_contour, previous_contour, angle/10, center_x, center_y, height, width, conversion_factor)
                             if overlap > max_overlap:
                                 max_overlap = overlap
                                 rotation = angle/10
-                        overlap = self.calculate_overlap(current_contour, previous_contour, rotation, center_x, center_y, height, width, True)
+                        overlap = self.calculate_overlap(current_contour, previous_contour, rotation, center_x, center_y, height, width, conversion_factor, True)
                         print(f'rotation = {rotation}')
                         previous_contour = current_contour
                         rotation_total += rotation
@@ -976,41 +976,54 @@ class oct_extraction:
                     rotation_total += rotation
                     rotations.append(rotation)
                     total_rotations.append(rotation_total)
-            
+        plt.plot(total_rotations)
+        plt.show()
         return np.array(total_rotations)
         
 
-    def calculate_overlap(self, current_contour, previous_contour, rotation_angle, center_x, center_y, height, width, plot=False):
+    def calculate_overlap(self, current_contour, previous_contour, rotation_angle, center_x, center_y, height, width, conversion_factor, plot=False):
         # Rotate the current contour around the fixed center point (512, 512)
-        rotated_contour = self.rotate_contour(current_contour, center_x, center_y, rotation_angle)
+        rotated_contour = self.rotate_contour(current_contour, center_x, center_y, rotation_angle, conversion_factor)
+        previous_contour = [(int(x/conversion_factor), int(y/conversion_factor)) for x, y in previous_contour]
 
         if plot:
-            plt.plot(rotated_contour[0], [1], 'o', color="red")
-            plt.plot(current_contour[0], [1], 'x', color="blue")
-            plt.plot(previous_contour[0], [1], 'x', color="black")
+            x = []
+            y = []
+            for point in rotated_contour:
+                x.append(point[0])
+                y.append(point[1])
 
+            plt.plot(x, y)
+            x = []
+            y = []
+            for point in previous_contour:
+                x.append(point[0])
+                y.append(point[1])
+
+            plt.plot(x, y)
+            plt.plot(center_x, center_y, "x")
+            plt.show()
 
         # Create blank images to store the intersection
-        image_current = np.zeros((height, width), dtype=np.uint8)
-        image_previous = np.zeros((height, width), dtype=np.uint8)
+        image_current = np.zeros((1024, 1024), dtype=np.uint8)
+        image_previous = np.zeros((1024, 1024), dtype=np.uint8)
         
-        previous_contour =  [(int(x), int(y)) for x, y in previous_contour]
+        
+        rotated_contour = np.array(rotated_contour, dtype=np.int32)
+        previous_contour = np.array(previous_contour, dtype=np.int32)
 
         # Draw the contours on the images
         cv2.drawContours(image_current, [rotated_contour], 0, 255, -1)
         cv2.drawContours(image_previous, [previous_contour], 0, 255, -1)
 
-        # Find the intersection (common area)
+         # Find the intersection (common area)
         intersection = cv2.bitwise_and(image_current, image_previous)
-        cv2.imshow("intersection", intersection)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+
         # Calculate the area of the intersection
-        area_intersection = cv2.contourArea(intersection)
+        white_pixel_count = cv2.countNonZero(intersection)
+        return white_pixel_count
 
-        return area_intersection
-
-    def rotate_contour(self, contour, center_x, center_y, angle_degrees):
+    def rotate_contour(self, contour, center_x, center_y, angle_degrees, conversion_factor):
         # Convert angle to radians
         angle_radians = np.deg2rad(angle_degrees)
 
@@ -1020,7 +1033,7 @@ class oct_extraction:
         # Apply rotation to each point in the contour
         rotated_contour = []
         for point in contour:
-            rotated_point = np.dot(rotation_matrix, [point[0], point[1], 1])
+            rotated_point = np.dot(rotation_matrix, [point[0]/conversion_factor, point[1]/conversion_factor, 1])
             rotated_contour.append((rotated_point[0], rotated_point[1]))
 
         return [(int(x), int(y)) for x, y in rotated_contour]
