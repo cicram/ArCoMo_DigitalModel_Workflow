@@ -40,7 +40,7 @@ class OCTAnalyzerGUI:
         self.color1 = (0, 255, 0)  # Green circle
         self.color2 = (192, 220, 192)  # Circle dots color
         # Initialize the z-coordinate for the first image
-        self.z_distance = 0.1  # Increment by 0.2 or 0.1mm
+        self.z_distance = 0.2  # Increment by 0.2 or 0.1mm
 
         # smoothing kernel size and threshold value
         self.smoothing_kernel_size = 15  # Adjust as needed
