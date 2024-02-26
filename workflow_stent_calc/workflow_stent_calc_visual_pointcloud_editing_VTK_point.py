@@ -391,9 +391,9 @@ class point_cloud_visual_editing:
 
         bds = [0] * 6
         sz = 50.0
-        bds[0] = upperRight.GetComputedDisplayValue(self.renderer)[0] - sz
+        bds[0] = upperRight.GetComputedDisplayValue(self.renderer)[0] - sz - 20
         bds[1] = bds[0] + sz
-        bds[2] = upperRight.GetComputedDisplayValue(self.renderer)[1] - sz
+        bds[2] = upperRight.GetComputedDisplayValue(self.renderer)[1] - sz - 20 
         bds[3] = bds[2] + sz
         bds[4] = bds[5] = 0.0
 
@@ -401,7 +401,7 @@ class point_cloud_visual_editing:
         remove_button_text_actor.GetTextProperty().SetFontSize(20)
         remove_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
         remove_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
-        remove_button_text_actor.SetPosition(bds[0]-140, bds[3]-80)
+        remove_button_text_actor.SetPosition(bds[0]-100, bds[3]-75)
         button_label = "Remove Button"  # Replace with your desired button label
         remove_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
         remove_button_text_actor.SetInput(button_label) 
@@ -413,7 +413,6 @@ class point_cloud_visual_editing:
 
         
         # Clear selection button
-
         # Create a VTK button widget for clearing the selection
         clear_button_rep = vtk.vtkTexturedButtonRepresentation2D()
         button_texture_off_clear = vtk.vtkImageData()
@@ -423,15 +422,15 @@ class point_cloud_visual_editing:
         clear_button_rep.SetButtonTexture(0, button_texture_off_clear)
 
         # Position the clear button in the bottom-right corner
-        buttomRight = vtk.vtkCoordinate()
-        buttomRight.SetCoordinateSystemToNormalizedDisplay()
-        buttomRight.SetValue(1.0, 0.0)
+        bottomRight = vtk.vtkCoordinate()
+        bottomRight.SetCoordinateSystemToNormalizedDisplay()
+        bottomRight.SetValue(1.0, 0.0)
+
 
         bds_clear = [0] * 6
-        sz = 50.0
-        bds_clear[0] = buttomRight.GetComputedDisplayValue(self.renderer)[0] + sz
+        bds_clear[0] = bottomRight.GetComputedDisplayValue(self.renderer)[0] - sz - 20  # Adjust the X-coordinate
         bds_clear[1] = bds_clear[0] + sz
-        bds_clear[2] = buttomRight.GetComputedDisplayValue(self.renderer)[1] - sz
+        bds_clear[2] = bottomRight.GetComputedDisplayValue(self.renderer)[1] + 70  # Adjust the Y-coordinate
         bds_clear[3] = bds_clear[2] + sz
         bds_clear[4] = bds_clear[5] = 0.0
 
@@ -445,7 +444,7 @@ class point_cloud_visual_editing:
         clear_button_text_actor.GetTextProperty().SetFontSize(20)
         clear_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
         clear_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
-        clear_button_text_actor.SetPosition(bds_clear[0]-250, bds_clear[3]+50)
+        clear_button_text_actor.SetPosition(bds_clear[0]-170, bds_clear[3])
         button_label = "Clear Selection Button"  # Replace with your desired button label
         clear_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
         clear_button_text_actor.SetInput(button_label) 
@@ -485,8 +484,8 @@ class point_cloud_visual_editing:
         save_button_text_actor.GetTextProperty().SetFontSize(20)
         save_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
         save_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
-        save_button_text_actor.SetPosition(bds_new[0], bds_new[3]-70)
-        button_label = "Save Button"  # Replace with your desired button label
+        save_button_text_actor.SetPosition(bds_new[0], bds_new[3]-75)
+        button_label = "Save and Close Button"  # Replace with your desired button label
         save_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
         save_button_text_actor.SetInput(button_label) 
         self.renderer.AddActor2D(save_button_text_actor)
@@ -499,6 +498,19 @@ class point_cloud_visual_editing:
         new_button_widget.AddObserver("StateChangedEvent", self.save_button_callback)
         new_button_widget.On()
 
+        # ----------------------------------------------------------------------- #
+        # instruction text #
+        # ----------------------------------------------------------------------- #
+
+        instruction_text_actor = vtk.vtkTextActor()
+        instruction_text_actor.GetTextProperty().SetFontSize(20)
+        instruction_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
+        instruction_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
+        instruction_text_actor.SetPosition(bds_new[0] + 500, bds_new[3]-30)
+        label = "Use Left mouse button to move point cloud, use right mouse button to select points"  # Replace with your desired button label
+        instruction_text_actor.SetTextScaleModeToNone()  # Disable text scaling
+        instruction_text_actor.SetInput(label) 
+        self.renderer.AddActor2D(instruction_text_actor)
 
         # Create and set the render window for the interactor
         self.render_window.Render()
