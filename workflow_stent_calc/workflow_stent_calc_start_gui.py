@@ -351,7 +351,7 @@ class OCTAnalyzerGUI:
         if processing_info == CALC or processing_info == STENT_AND_CALC:
             rotated_grouped_OCT_calc = center_line_registrator.rotate_frames(grouped_calc, oct_lumen_rotation_matrix, self.display_results)
       
-        if self.display_results:
+        if self.display_results or True:
             #------------------------------------------#
             import matplotlib.pyplot as plt
             fig = plt.figure()
@@ -360,29 +360,38 @@ class OCTAnalyzerGUI:
             x_filtered = []
             y_filtered = []
             z_filtered = []
-            for z_level, frame_points in grouped_OCT_lumen.items():
+            for frame_points in oct_lumen_contours:
                 for i, data in enumerate(frame_points):
-                    if i % 3 == 0:
-                        x_filtered.append(frame_points[i][0])
-                        y_filtered.append(frame_points[i][1])
-                        z_filtered.append(frame_points[i][2])
-            ax.scatter(x_filtered[::], y_filtered[::], z_filtered[::], c="blue", marker='o')
+                    if i // 1000 % 20 == 0:
+                        x_filtered.append(data[0])
+                        y_filtered.append(data[1])
+                        z_filtered.append(data[2])
+            ax.scatter(x_filtered[::20], y_filtered[::20], z_filtered[::20], c="blue", marker='o')
+            x_filtered = []         
+            y_filtered = []
+            z_filtered = []
+            for frame_points in oct_lumen_point_cloud:
+                for i, data in enumerate(frame_points):
+                    if i // 1000 % 20 == 0:
+                        x_filtered.append(data[0])
+                        y_filtered.append(data[1])
+                        z_filtered.append(data[2])
+            ax.scatter(x_filtered[::20], y_filtered[::20], z_filtered[::20], c="red", marker='o')
+            max_z = max(z_filtered)
+
+            # Plot the line marking the Z-axis
+            ax.plot([0, 0], [0, 0], [0, max_z], c='black')
             ax.set_xlabel('Px')
             ax.set_ylabel('Py')
             ax.set_zlabel('Pz')
             x_filtered = []
             y_filtered = []
             z_filtered = []
-            for i, frame_points in enumerate(resampled_pc_centerline):
-                if (i+3) % 3 == 0:
-                    x_filtered.append(frame_points[0])
-                    y_filtered.append(frame_points[1])
-                    z_filtered.append(frame_points[2])
-            ax.scatter(x_filtered, y_filtered, z_filtered, c="black", marker='o', s=2)
+        
             from matplotlib.lines import Line2D
 
-            legend_elements = [Line2D([0], [0], marker='o', color='w', label='OCT lumen contours', markerfacecolor='red', markersize=10),
-                                Line2D([0], [0], marker='o', color='w', label='Center-line', markerfacecolor='black', markersize=10)]
+            legend_elements = [Line2D([0], [0], marker='o', color='w', label='OCT lumen contours unaligned', markerfacecolor='blue', markersize=10),
+                                Line2D([0], [0], marker='o', color='w', label='OCT lumen contours aligned', markerfacecolor='red', markersize=10)]
             ax.legend(handles=legend_elements, loc='best')
 
             # Remove grid
