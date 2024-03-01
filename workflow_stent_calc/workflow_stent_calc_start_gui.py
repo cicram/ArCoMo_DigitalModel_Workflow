@@ -128,7 +128,7 @@ class OCTAnalyzerGUI:
         self.correction_method_dropdown.grid(row=5, column=1, padx=10, pady=5)
 
         self.check_include_calc.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        self.check_include_stent.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_include_stent.grid(row=7, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         self.check_save_intermediate_steps.grid(row=8, column=0, columnspan=2, padx=10, pady=5, sticky="w")
         self.check_display_intermediate_results.grid(row=9, column=0, columnspan=2, padx=10, pady=5, sticky="w")
@@ -338,7 +338,7 @@ class OCTAnalyzerGUI:
         centerline_registration_point_selector = PointCloudRegistrationPointSelectionVisualizer(resampled_pc_centerline, registration_point_CT)
         centerline_registration_start = centerline_registration_point_selector.selected_point_index_red
         selected_registration_point_CT = np.array(centerline_registration_point_selector.selected_registration_point_CT)
-
+        print(centerline_registration_start)
         oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(centerline_registration_point_selector.selected_point_index_blue, self.OCT_start_frame, registration_point_CT, resampled_pc_centerline, centerline_registration_start, grouped_OCT_lumen, 
                                                                                                                           registration_point_OCT, selected_registration_point_CT, self.OCT_registration_frame, self.z_distance, self.display_results)
 
@@ -360,25 +360,39 @@ class OCTAnalyzerGUI:
             x_filtered = []
             y_filtered = []
             z_filtered = []
-            for z_level, frame_points in rotated_grouped_OCT_lumen.items():
+            for z_level, frame_points in grouped_OCT_lumen.items():
                 for i, data in enumerate(frame_points):
-                    x_filtered.append(frame_points[i][0])
-                    y_filtered.append(frame_points[i][1])
-                    z_filtered.append(frame_points[i][2])
-            ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
+                    if i % 3 == 0:
+                        x_filtered.append(frame_points[i][0])
+                        y_filtered.append(frame_points[i][1])
+                        z_filtered.append(frame_points[i][2])
+            ax.scatter(x_filtered[::], y_filtered[::], z_filtered[::], c="blue", marker='o')
             ax.set_xlabel('Px')
             ax.set_ylabel('Py')
             ax.set_zlabel('Pz')
             x_filtered = []
             y_filtered = []
             z_filtered = []
-            for z_level, frame_points in rotated_grouped_OCT_calc.items():
-                for i, data in enumerate(frame_points):
-                    x_filtered.append(frame_points[i][0])
-                    y_filtered.append(frame_points[i][1])
-                    z_filtered.append(frame_points[i][2])
-            ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="red", marker='o')
-   
+            for i, frame_points in enumerate(resampled_pc_centerline):
+                if (i+3) % 3 == 0:
+                    x_filtered.append(frame_points[0])
+                    y_filtered.append(frame_points[1])
+                    z_filtered.append(frame_points[2])
+            ax.scatter(x_filtered, y_filtered, z_filtered, c="black", marker='o', s=2)
+            from matplotlib.lines import Line2D
+
+            legend_elements = [Line2D([0], [0], marker='o', color='w', label='OCT lumen contours', markerfacecolor='red', markersize=10),
+                                Line2D([0], [0], marker='o', color='w', label='Center-line', markerfacecolor='black', markersize=10)]
+            ax.legend(handles=legend_elements, loc='best')
+
+            # Remove grid
+            ax.grid(False)
+
+            # Remove axes
+            ax.set_axis_off()
+
+            # Set background color to white
+            ax.set_facecolor('white')
             plt.show()
             #------------------------------------------#
 
@@ -398,7 +412,7 @@ class OCTAnalyzerGUI:
             registered_oct_lumen, registered_oct_calc = center_line_registrator.register_OCT_frames_onto_centerline_calc(rotated_grouped_OCT_lumen, rotated_grouped_OCT_calc, centerline_registration_start, centerline_vectors,
                                                                                                 resampled_pc_centerline, self.OCT_registration_frame, self.OCT_start_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
 
-        if self.display_results:
+        if self.display_results or False:
             #------------------------------------------#
             import matplotlib.pyplot as plt
             fig = plt.figure()
@@ -407,23 +421,49 @@ class OCTAnalyzerGUI:
             x_filtered = []
             y_filtered = []
             z_filtered = []
-            for frame_points in registered_oct_lumen:
-                x_filtered.append(frame_points[0])
-                y_filtered.append(frame_points[1])
-                z_filtered.append(frame_points[2])
-            ax.scatter(x_filtered[::30], y_filtered[::30], z_filtered[::30], c="blue", marker='o')
+            colors = []
+
+            target = len(registered_oct_lumen)/500/2
+            for i, frame_points in enumerate(registered_oct_lumen):
+                if i // 500 % 3 == 0:
+                    x_filtered.append(frame_points[0])
+                    y_filtered.append(frame_points[1])
+                    z_filtered.append(frame_points[2])
+                    if target*500 - 750 <= i < target*500 + 750:
+                        colors.append('blue')
+                    else:
+                        colors.append('red')
+
+            ax.scatter(x_filtered, y_filtered, z_filtered, c=colors, marker='o', s=2)
             ax.set_xlabel('Px')
             ax.set_ylabel('Py')
             ax.set_zlabel('Pz')
             x_filtered = []
             y_filtered = []
             z_filtered = []
-            for frame_points in registered_oct_stent:
-                x_filtered.append(frame_points[0])
-                y_filtered.append(frame_points[1])
-                z_filtered.append(frame_points[2])
-            ax.scatter(x_filtered, y_filtered, z_filtered, c="red", marker='o')
+            for i, frame_points in enumerate(resampled_pc_centerline):
+                if (i+2) % 3 == 0:
+                    x_filtered.append(frame_points[0])
+                    y_filtered.append(frame_points[1])
+                    z_filtered.append(frame_points[2])
+            ax.scatter(x_filtered, y_filtered, z_filtered, c="black", marker='o', s=2)
+            #ax.plot(x_filtered, y_filtered, z_filtered, c="black")  # This line connects the points
 
+            from matplotlib.lines import Line2D
+
+            legend_elements = [Line2D([0], [0], marker='o', color='w', label='OCT lumen contours', markerfacecolor='red', markersize=10),
+                                Line2D([0], [0], marker='o', color='w', label='Center-line', markerfacecolor='black', markersize=10), 
+                                Line2D([0], [0], marker='o', color='w', label='OCT registration lumen contour', markerfacecolor='blue', markersize=10)]
+            ax.legend(handles=legend_elements, loc='best')
+
+            # Remove grid
+            ax.grid(False)
+
+            # Remove axes
+            ax.set_axis_off()
+
+            # Set background color to white
+            ax.set_facecolor('white')
             plt.show()
             #------------------------------------------#
 

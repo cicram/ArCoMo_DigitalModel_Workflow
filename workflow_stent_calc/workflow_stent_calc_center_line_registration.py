@@ -533,7 +533,7 @@ class center_line_registration:
         # Find start idx to know at what centerline index they have to be aligned 
         z_level_registration = round((OCT_registration_frame - OCT_start_frame) * z_distance, 1)
         count = 0
-
+        
         for z_level, frame_points in grouped_OCT_frames.items():
             if z_level > z_level_registration:
                 count += 1
@@ -568,6 +568,67 @@ class center_line_registration:
             saved_registered_splines.append(registered_spline)
             rot_vec = np.dot(rotation_matrix, source_normal_vector)
             
+            #------------------------------------------#
+            registered_spline_plot = np.array(frame_points)
+            translation_vector = target_centerline_point - registered_spline_plot.mean(axis=0)
+            registered_spline_plot += translation_vector
+
+            if False:
+                import matplotlib.pyplot as plt
+                fig = plt.figure()
+                ax = fig.add_subplot(111, projection='3d')
+                # Show the plot
+                x_filtered = []
+                y_filtered = []
+                z_filtered = []
+                for frame_points in registered_spline:
+                    x_filtered.append(frame_points[0])
+                    y_filtered.append(frame_points[1])
+                    z_filtered.append(frame_points[2])
+                ax.scatter(x_filtered, y_filtered, z_filtered, c="blue", marker='o')
+                ax.set_xlabel('Px')
+                ax.set_ylabel('Py')
+                ax.set_zlabel('Pz')
+                x_filtered = []
+                y_filtered = []
+                z_filtered = []
+                for frame_points in registered_spline_plot:
+                        x_filtered.append(frame_points[0])
+                        y_filtered.append(frame_points[1])
+                        z_filtered.append(frame_points[2])
+                ax.scatter(x_filtered, y_filtered, z_filtered, c="red", marker='o', s=2)
+                x_filtered = []
+                y_filtered = []
+                z_filtered = []
+                for i, frame_points in enumerate(resampled_pc_centerline):
+                    if (i+3) % 3 == 0:
+                        x_filtered.append(frame_points[0])
+                        y_filtered.append(frame_points[1])
+                        z_filtered.append(frame_points[2])
+                ax.scatter(x_filtered, y_filtered, z_filtered, c="black", marker='o', s=2)
+                origin = target_centerline_point
+                ax.quiver(*origin, *normal_vector, color='blue', length=1, normalize=True)
+                ax.quiver(*origin, *source_normal_vector, color='red', length=1, normalize=True)
+
+                from matplotlib.lines import Line2D
+
+                legend_elements = [Line2D([0], [0], marker='o', color='w', label='Unrotated OCT lumen contour', markerfacecolor='red', markersize=10),
+                                    Line2D([0], [0], marker='o', color='w', label='Center-line', markerfacecolor='black', markersize=10),
+                                    Line2D([0], [0], marker='o', color='w', label='Rotated OCT lumen contour', markerfacecolor='blue', markersize=10)]
+
+                ax.legend(handles=legend_elements, loc='best')
+
+                # Remove grid
+                ax.grid(False)
+
+                # Remove axes
+                ax.set_axis_off()
+
+                # Set background color to white
+                ax.set_facecolor('white')
+                plt.show()
+            #------------------------------------------#
+
             # Save registration point
             if z_level == z_level_registration:
             # Write the coordinates to the text file

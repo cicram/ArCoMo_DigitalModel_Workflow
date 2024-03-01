@@ -102,7 +102,7 @@ class oct_extraction:
         return binary_mask_removed
 
 
-    def close_binary_mask(self, binary_mask):
+    def close_binary_mask(self, binary_mask, display_images):
         # Find contours in the binary mask.
         contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -118,6 +118,9 @@ class oct_extraction:
         closed_mask = np.zeros_like(binary_mask)
         cv2.drawContours(closed_mask, [convex_hull], -1, 255, thickness=cv2.FILLED)
 
+        if display_images:
+            self.plt_cv2_images('Closed mask image', closed_mask)
+
         return closed_mask
 
 
@@ -126,7 +129,7 @@ class oct_extraction:
         kernel = np.ones((30, 30), np.uint8)
         closed_mask_ = cv2.morphologyEx(binary_mask, cv2.MORPH_CLOSE, kernel)
 
-        closed_mask = self.close_binary_mask(closed_mask_)
+        closed_mask = self.close_binary_mask(closed_mask_, display_images)
         # Check if there is a contour, if not, go back
         if closed_mask is None:
             return None
@@ -152,7 +155,18 @@ class oct_extraction:
         x2, y2 = splev(u, tck2)
 
         fitted_contour = list(zip(x2, y2))
+        
+        if display_images:
+            # Create an all black image with the same size as the binary mask image
+            black_image = np.zeros_like(binary_mask)
 
+            # Draw the fitted contour on the black image
+            cv2.drawContours(black_image, [np.array(fitted_contour, dtype=np.int32)], -1, (255, 255, 255), 2)
+
+            # Display the black image with the fitted contour
+            cv2.imshow("Black Image with Fitted Contour", black_image)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()     
         return fitted_contour
 
 
