@@ -511,6 +511,7 @@ class oct_lumen_extraction:
         point_cloud = []
         transformation_matrix_previous = None
         my_aligned_images = []
+        unaligned_current_contour_list = []
         total_rotation_degrees_previous = 0
         with Image.open(input_file) as im:
             for page in range(OCT_start_frame, OCT_end_frame, 1):
@@ -563,7 +564,7 @@ class oct_lumen_extraction:
                 if current_contour is not None:
 
                     # save unaligned pointcloud
-                    if save_file:
+                    if save_file or True:
                         # Calculate the centroid of the aligned points.
                         centroid_unaligned = np.mean(current_contour, axis=0)
 
@@ -573,7 +574,7 @@ class oct_lumen_extraction:
                         # Create a 3D point cloud with incremental z-coordinate and convert into mm unit.
                         unaligned_current_contour = [(xi * conversion_factor, yi * conversion_factor, z_coordinate) for xi, yi in
                                             unaligned_source_points_shifted]
-
+                        unaligned_current_contour_list.append(unaligned_current_contour)
                         # Write the coordinates to the text file
                         with open("workflow_processed_data_output/unaligned_OCT_frames.txt", 'a') as file:
                             for coord in unaligned_current_contour:
@@ -672,6 +673,7 @@ class oct_lumen_extraction:
                     my_aligned_images.append(aligned_image_points_shifted)
 
                     ##############################################################
+                    
                     if False:
                         fig = plt.figure()
                         ax = fig.add_subplot(111, projection='3d')
@@ -700,6 +702,67 @@ class oct_lumen_extraction:
                     ##############################################################
                 z_coordinate += z_offset  # Increment z-coordinate
 
+        if True:
+        #------------------------------------------#
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            # Show the plot
+            x_filtered = []
+            y_filtered = []
+            z_filtered = []
+            itr = 0
+            for frame_points in unaligned_current_contour_list:
+                for i, data in enumerate(frame_points):
+                        x_filtered.append(data[0])
+                        y_filtered.append(data[1])
+                        z_filtered.append(data[2])
+                if itr % 40 == 0:
+                    ax.plot(x_filtered[::20], y_filtered[::20], z_filtered[::20], color="blue")
+                itr += 1    # ax.scatter(x_filtered[::20], y_filtered[::20], z_filtered[::20], c="blue", marker='o')
+            x_filtered = []         
+            y_filtered = []
+            z_filtered = []
+            itr = 0
+            for frame_points in point_cloud:
+                for i, data in enumerate(frame_points):
+                        x_filtered.append(data[0])
+                        y_filtered.append(data[1])
+                        z_filtered.append(data[2])
+
+                if itr % 40 == 0:
+                    ax.plot(x_filtered[::20], y_filtered[::20], z_filtered[::20], color="red")
+                itr += 1
+                #ax.scatter(x_filtered[::20], y_filtered[::20], z_filtered[::20], c="red", marker='o')
+            max_z = max(z_filtered)
+
+            if False:
+                # Plot the line marking the Z-axis
+                lace = 0
+                ax.plot([place, place], [place, place], [0, max_z], c='black')
+                ax.set_xlabel('Px')
+                ax.set_ylabel('Py')
+                ax.set_zlabel('Pz')
+                x_filtered = []
+                y_filtered = []
+                z_filtered = []
+
+            from matplotlib.lines import Line2D
+
+            legend_elements = [Line2D([0], [0], marker='o', color='w', label='OCT lumen contours unaligned', markerfacecolor='blue', markersize=10),
+                                Line2D([0], [0], marker='o', color='w', label='OCT lumen contours aligned', markerfacecolor='red', markersize=10)]
+            ax.legend(handles=legend_elements, loc='best')
+
+            # Remove grid
+            ax.grid(False)
+
+            # Remove axes
+            ax.set_axis_off()
+
+            # Set background color to white
+            ax.set_facecolor('white')
+plt.show()
+            #------------------------------------------#
         x_filtered = []
         y_filtered = []
         z_filtered = []

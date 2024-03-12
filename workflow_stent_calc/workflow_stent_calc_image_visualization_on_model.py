@@ -143,7 +143,6 @@ class OctImageVisualizier:
             for page in range(OCT_start_frame, OCT_end_frame, 1):
                 ##################################################
                 inverse_page = OCT_start_frame + image_diff - iter
-                print(inverse_page)
                 im.seek(inverse_page)  # Get coorect page here
                 iter += 1
                 ####################################################
@@ -155,7 +154,7 @@ class OctImageVisualizier:
                 height, width = gray_image.shape
                 
                 # Set here, what pages should be shown
-                page_to_show = [OCT_registration_frame]
+                page_to_show = [OCT_registration_frame, OCT_registration_frame + 1, OCT_registration_frame + 2, OCT_registration_frame + 3, OCT_registration_frame + 4]
 
                 if inverse_page in page_to_show:
                     index_image = page - OCT_start_frame # reason: order is in reverse (top to down, image interated dwon to top) (due to restructering of grouped frames)
@@ -293,7 +292,7 @@ class OctImageVisualizier:
                 actor_centerline.GetProperty().SetColor(1.0, 0.0, 0.0)  # Set color to red
 
                 # Add the actor to the renderer
-                renderer.AddActor(actor_centerline)
+                #renderer.AddActor(actor_centerline)
 
                 points__ = vtk.vtkPoints()
                 for point_frame in center_line:

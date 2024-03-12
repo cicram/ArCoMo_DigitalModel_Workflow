@@ -294,6 +294,11 @@ class OCTAnalyzerGUI:
         center_line_registrator = center_line_registration()
         grouped_OCT_lumen = center_line_registrator.restructure_point_clouds(oct_lumen_point_cloud, self.OCT_start_frame, self.OCT_end_frame, self.z_distance)
 
+        ############################
+        unrotated_grouped_OCT_lumen = center_line_registrator.restructure_point_clouds(oct_lumen_contours, self.OCT_start_frame, self.OCT_end_frame, self.z_distance)
+
+        ############################
+
         # Get oct calc contours
         if processing_info == CALC or processing_info == STENT_AND_CALC:
             instruction_text = "OCT calc extraction is performed. Instructions: Draw path with left mouse click then release. Press 'C' to accept drawn path. Press 'R' to restart. Press 'S' to save path."
@@ -331,16 +336,67 @@ class OCTAnalyzerGUI:
         # Compute center line vectors, that point from the previous centerline-point to the next centerline-point
         centerline_vectors = center_line_registrator.find_centerline_vectors(resampled_pc_centerline, self.display_results)
 
-        # Get registration hight
+        # Get registration points and compute roation matrix
         instruction_text = "Select the registration height on the centerline (should be on hight of bifurication). Red for main branch, Blue for side branch, use toggle button to switch"
         self.add_instruction_text(instruction_text)
 
         centerline_registration_point_selector = PointCloudRegistrationPointSelectionVisualizer(resampled_pc_centerline, registration_point_CT)
         centerline_registration_start = centerline_registration_point_selector.selected_point_index_red
         selected_registration_point_CT = np.array(centerline_registration_point_selector.selected_registration_point_CT)
-        print(centerline_registration_start)
         oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(centerline_registration_point_selector.selected_point_index_blue, self.OCT_start_frame, registration_point_CT, resampled_pc_centerline, centerline_registration_start, grouped_OCT_lumen, 
                                                                                                                           registration_point_OCT, selected_registration_point_CT, self.OCT_registration_frame, self.z_distance, self.display_results)
+
+        if self.display_results or True:
+            #------------------------------------------#
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            # Show the plot
+            x_filtered = []
+            y_filtered = []
+            z_filtered = []
+            for i, frame_points in enumerate(resampled_pc_centerline):
+                if i != centerline_registration_start:
+                    if i != centerline_registration_point_selector.selected_point_index_blue:
+                        x_filtered.append(frame_points[0])
+                        y_filtered.append(frame_points[1])
+                        z_filtered.append(frame_points[2])
+            ax.scatter(x_filtered, y_filtered, z_filtered, c="black", marker='o', s=8)
+            #ax.scatter(rotated_registration_point_OCT[0], rotated_registration_point_OCT[1], rotated_registration_point_OCT[2], c="yellow", marker='o', s=3)
+            ax.scatter(selected_registration_point_CT[0], selected_registration_point_CT[1], selected_registration_point_CT[2], c="grey", marker='o', s=20)
+            ax.scatter(resampled_pc_centerline[centerline_registration_start][0], resampled_pc_centerline[centerline_registration_start][1], resampled_pc_centerline[centerline_registration_start][2], c="red", marker='o', s=20)
+            ax.scatter(resampled_pc_centerline[centerline_registration_point_selector.selected_point_index_blue][0], resampled_pc_centerline[centerline_registration_point_selector.selected_point_index_blue][1], resampled_pc_centerline[centerline_registration_point_selector.selected_point_index_blue][2], c="blue", marker='o', s=20)
+
+            # Extract the coordinates of the two points
+            x_values = [resampled_pc_centerline[centerline_registration_start][0], 
+                        resampled_pc_centerline[centerline_registration_point_selector.selected_point_index_blue][0]]
+            y_values = [resampled_pc_centerline[centerline_registration_start][1], 
+                        resampled_pc_centerline[centerline_registration_point_selector.selected_point_index_blue][1]]
+            z_values = [resampled_pc_centerline[centerline_registration_start][2], 
+                        resampled_pc_centerline[centerline_registration_point_selector.selected_point_index_blue][2]]
+
+            # Plot the line connecting the two points
+            ax.plot(x_values, y_values, z_values, c='black')
+
+            from matplotlib.lines import Line2D
+
+            legend_elements = [Line2D([0], [0], marker='o', color='w', label='Center-line', markerfacecolor='black', markersize=10),
+                                Line2D([0], [0], marker='o', color='w', label='Registration point CT', markerfacecolor='grey', markersize=10),
+                                Line2D([0], [0], marker='o', color='w', label='Selected center-line point branch of interest', markerfacecolor='red', markersize=10),
+                                Line2D([0], [0], marker='o', color='w', label='Selected center-line point side branch', markerfacecolor='blue', markersize=10)]
+
+            ax.legend(handles=legend_elements, loc='best')
+
+            # Remove grid
+            ax.grid(False)
+
+            # Remove axes
+            ax.set_axis_off()
+
+            # Set background color to white
+            ax.set_facecolor('white')
+            plt.show()
+            #------------------------------------------#
 
         # rotate OCT_frames
         rotated_grouped_OCT_lumen = center_line_registrator.rotate_frames(grouped_OCT_lumen, oct_lumen_rotation_matrix, self.display_results)
@@ -351,7 +407,7 @@ class OCTAnalyzerGUI:
         if processing_info == CALC or processing_info == STENT_AND_CALC:
             rotated_grouped_OCT_calc = center_line_registrator.rotate_frames(grouped_calc, oct_lumen_rotation_matrix, self.display_results)
       
-        if self.display_results or True:
+        if self.display_results or False:
             #------------------------------------------#
             import matplotlib.pyplot as plt
             fig = plt.figure()
@@ -380,7 +436,8 @@ class OCTAnalyzerGUI:
             max_z = max(z_filtered)
 
             # Plot the line marking the Z-axis
-            ax.plot([0, 0], [0, 0], [0, max_z], c='black')
+            place = 512*self.conversion_factor
+            ax.plot([place, place], [place, place], [0, max_z], c='black')
             ax.set_xlabel('Px')
             ax.set_ylabel('Py')
             ax.set_zlabel('Pz')

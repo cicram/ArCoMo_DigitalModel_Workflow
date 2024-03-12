@@ -26,8 +26,8 @@ if __name__ == "__main__":
     color2 = (192, 220, 192)  # Circle dots color
 
     # OCT image start and stop frame
-    OCT_start_frame = 4
-    OCT_end_frame = 285
+    OCT_start_frame = 300
+    OCT_end_frame = 350
 
     # Initialize the z-coordinate for the first image
     z_distance = 0.2  # Increment by 0.2 or 0.1mm
