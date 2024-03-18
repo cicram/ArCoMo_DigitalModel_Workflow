@@ -219,20 +219,20 @@ class OCTAnalyzerGUI:
             self.input_file_OCT_blank = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_blank.tif'
             self.path_point_cloud_calc = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_calc.xyz'
             self.path_segmented_calc = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_segmented_calc.xyz'
-
+            self.crop_bottom = 150
+            self.image_hight = 1024 - self.crop_top - self.crop_bottom
             processing_info = STENT_AND_CALC
             self.run_processing(processing_info)
 
         elif self.include_stent and not self.include_calc:
             # Run workflow just with stent
             print("stent workflow")
-            print("Change bottom cropping for stent!")
-            self.crop_bottom = 0
             self.input_file_OCT = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_lumen.tif'
             self.input_file_OCT_stent = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_stent.tif'
             self.input_file_OCT_blank = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_blank.tif'
             self.path_point_cloud_stent = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_stent.xyz'
-
+            self.crop_bottom = 150
+            self.image_hight = 1024 - self.crop_top - self.crop_bottom
             processing_info = STENT
             self.run_processing(processing_info)
 
@@ -283,8 +283,17 @@ class OCTAnalyzerGUI:
         
 
         import  matplotlib.pyplot as plt
-        plt.plot(oct_rotation_angles)
+        plt.plot(oct_rotation_angles, label="Axial rotation angles")  # Add a label to your plot for the legend
+        plt.xlabel("OCT pullback image")  # Add an x-axis label
+        plt.ylabel("Rotation angle [°]")  # Add a y-axis label
+        plt.legend()  # Display the legend
         plt.show()
+        # Saving the data to a .txt file
+        path_axial_correction = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + 'axial_angle_correction'  + str(self.axial_twist_correction_method)  +'.xyz'
+
+        with open(path_axial_correction, "w") as file:
+            for angle in oct_rotation_angles:
+                file.write(f"{angle}\n")
 
         # Align oct frames and registration point
         oct_lumen_point_cloud = oct_extractor.frames_alignment(oct_lumen_contours, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
@@ -346,7 +355,7 @@ class OCTAnalyzerGUI:
         oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(centerline_registration_point_selector.selected_point_index_blue, self.OCT_start_frame, registration_point_CT, resampled_pc_centerline, centerline_registration_start, grouped_OCT_lumen, 
                                                                                                                           registration_point_OCT, selected_registration_point_CT, self.OCT_registration_frame, self.z_distance, self.display_results)
 
-        if self.display_results or True:
+        if self.display_results or False:
             #------------------------------------------#
             import matplotlib.pyplot as plt
             fig = plt.figure()

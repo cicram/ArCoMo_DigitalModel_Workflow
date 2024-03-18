@@ -39,6 +39,15 @@ class oct_extraction:
 
         # Combine the masks to create a binary mask
         binary_mask = cv2.bitwise_or(mask1, mask2)
+        ##### PHANTOM MODEL ############################3
+        if False:
+            color = [255, 255, 255]
+            lower_color2 = np.array([color[2] - 1, color[1] - 1, color[0] - 1], dtype=np.uint8)
+            upper_color2 = np.array([color[2] + 1, color[1] + 1, color[0] + 1], dtype=np.uint8)
+            mask2 = cv2.inRange(input_image, lower_color2, upper_color2)
+            # Combine the masks to create a binary mask
+            binary_mask = cv2.bitwise_or(mask1, mask2)
+        ##### PHANTOM MODEL ############################3
 
         return binary_mask
 
@@ -953,6 +962,8 @@ class oct_extraction:
         rotation_total = 0
         rotation = 0
         z_previous = 0
+        prnitng_overlaps = []
+        prnitng_angle = []
 
         for current_contour in oct_lumen_contours:
             max_overlap = 0
@@ -966,6 +977,8 @@ class oct_extraction:
                         # Perform overlap measurements.
                         for angle in range(-30, 31):
                             overlap = self.calculate_overlap(current_contour, previous_contour, angle/10, center_x, center_y, height, width, conversion_factor)
+                            prnitng_overlaps.append(overlap)
+                            prnitng_angle.append(angle/10)
                             if overlap > max_overlap:
                                 max_overlap = overlap
                                 rotation = angle/10
@@ -990,8 +1003,14 @@ class oct_extraction:
                     rotation_total += rotation
                     rotations.append(rotation)
                     total_rotations.append(rotation_total)
-        plt.plot(total_rotations)
-        plt.show()
+            if False:
+                plt.plot(prnitng_angle, prnitng_overlaps ,label="Overlap of contours")
+                plt.plot(rotation, max_overlap , "x", label="Max overlap")
+
+                plt.xlabel("Rotation angle [°]")  # Add an x-axis label
+                plt.ylabel("Overlapping area [pixels]")  # Add a y-axis label
+                plt.legend()  # Display the legend
+                plt.show()
         return np.array(total_rotations)
         
 
@@ -1000,7 +1019,7 @@ class oct_extraction:
         rotated_contour = self.rotate_contour(current_contour, center_x, center_y, rotation_angle, conversion_factor)
         previous_contour = [(int(x/conversion_factor), int(y/conversion_factor)) for x, y in previous_contour]
 
-        if plot:
+        if False:
             x = []
             y = []
             for point in rotated_contour:

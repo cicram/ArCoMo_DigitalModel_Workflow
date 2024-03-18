@@ -154,7 +154,7 @@ class OctImageVisualizier:
                 height, width = gray_image.shape
                 
                 # Set here, what pages should be shown
-                page_to_show = [OCT_registration_frame, OCT_registration_frame + 1, OCT_registration_frame + 2, OCT_registration_frame + 3, OCT_registration_frame + 4]
+                page_to_show = []#[OCT_registration_frame, OCT_registration_frame + 1, OCT_registration_frame + 2, OCT_registration_frame + 3, OCT_registration_frame + 4]
 
                 if inverse_page in page_to_show:
                     index_image = page - OCT_start_frame # reason: order is in reverse (top to down, image interated dwon to top) (due to restructering of grouped frames)
@@ -292,7 +292,7 @@ class OctImageVisualizier:
                 actor_centerline.GetProperty().SetColor(1.0, 0.0, 0.0)  # Set color to red
 
                 # Add the actor to the renderer
-                #renderer.AddActor(actor_centerline)
+                renderer.AddActor(actor_centerline)
 
                 points__ = vtk.vtkPoints()
                 for point_frame in center_line:
@@ -324,7 +324,7 @@ class OctImageVisualizier:
                 actor_centerline.GetProperty().SetColor(1.0, 1.0, 0.0)  # Set color to red
 
                 # Add the actor to the renderer
-                renderer.AddActor(actor_centerline)
+                #renderer.AddActor(actor_centerline)
     ################### to be removed plots all splines
 
         
@@ -482,6 +482,35 @@ class OctImageVisualizier:
 
                 # Add actors to the renderer
                 renderer.AddActor(cube_axes_actor)
+
+
+########################################### REMOVE ME ##############################################
+            # Load and display the .obj file
+        obj_file_path = 'phantom_data/GT_stenose_self_centerline_with_side_branch_obj_file.obj'
+        reader = vtk.vtkOBJReader()
+        reader.SetFileName(obj_file_path)
+
+        # Create a VTK mapper for the .obj file
+        obj_mapper = vtk.vtkPolyDataMapper()
+        obj_mapper.SetInputConnection(reader.GetOutputPort())
+
+        # Create a VTK actor for the .obj file
+        obj_actor_calc = vtk.vtkActor()
+        obj_actor_calc.SetMapper(obj_mapper)
+        obj_actor_calc.GetProperty().SetOpacity(0.5)  # Set opacity to 0.5 for semi-transparency
+        obj_actor_calc.GetProperty().SetColor([1.0, 1.0, 1.0])  # Set color to light blue
+
+        # Add the actor for the .obj file to the renderer
+        renderer.AddActor(obj_actor_calc)
+
+        #Outershell
+        # Create a VTK actor for the structured grid
+        actor_outershell = vtk.vtkActor()
+        actor_outershell.SetMapper(mapper)
+
+        # Add the actor to the renderer
+        renderer.AddActor(actor_outershell)
+########################################### REMOVE ME ##############################################
 
         # Reset camera and render
         renderer.ResetCamera()

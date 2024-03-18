@@ -501,9 +501,9 @@ class center_line_registration:
                 registered_calc_4 += translation_vector_4
 
                 saved_registered_calc.append(registered_calc)    
-                saved_registered_calc.append(registered_calc_2)         
-                saved_registered_calc.append(registered_calc_3)         
-                saved_registered_calc.append(registered_calc_4)         
+                #saved_registered_calc.append(registered_calc_2)         
+                #saved_registered_calc.append(registered_calc_3)         
+                #saved_registered_calc.append(registered_calc_4)         
 
         oct_points = []
         for spline in saved_registered_splines:
