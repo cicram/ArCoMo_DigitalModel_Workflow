@@ -975,14 +975,14 @@ class oct_extraction:
                 if (z_diff) < (z_distance + 0.01):
                     if previous_contour is not None:
                         # Perform overlap measurements.
-                        for angle in range(-30, 31):
-                            overlap = self.calculate_overlap(current_contour, previous_contour, angle/10, center_x, center_y, height, width, conversion_factor)
+                        for angle in range(-60, 61):
+                            overlap = self.calculate_overlap(current_contour, previous_contour, angle/20, center_x, center_y, height, width, conversion_factor, False)
                             prnitng_overlaps.append(overlap)
-                            prnitng_angle.append(angle/10)
+                            prnitng_angle.append(angle/20)
                             if overlap > max_overlap:
                                 max_overlap = overlap
-                                rotation = angle/10
-                        overlap = self.calculate_overlap(current_contour, previous_contour, rotation, center_x, center_y, height, width, conversion_factor, True)
+                                rotation = angle/20
+                        overlap = self.calculate_overlap(current_contour, previous_contour, rotation, center_x, center_y, height, width, conversion_factor, False)
                         print(f'rotation = {rotation}')
                         previous_contour = current_contour
                         rotation_total += rotation
@@ -1014,12 +1014,12 @@ class oct_extraction:
         return np.array(total_rotations)
         
 
-    def calculate_overlap(self, current_contour, previous_contour, rotation_angle, center_x, center_y, height, width, conversion_factor, plot=False):
+    def calculate_overlap(self, current_contour, previous_contour, rotation_angle, center_x, center_y, height, width, conversion_factor, plot_flag):
         # Rotate the current contour around the fixed center point (512, 512)
-        rotated_contour = self.rotate_contour(current_contour, center_x, center_y, rotation_angle, conversion_factor)
+        rotated_contour = self.rotate_contour(current_contour, center_x, center_y, -rotation_angle, conversion_factor)
         previous_contour = [(int(x/conversion_factor), int(y/conversion_factor)) for x, y in previous_contour]
 
-        if False:
+        if plot_flag:
             x = []
             y = []
             for point in rotated_contour:

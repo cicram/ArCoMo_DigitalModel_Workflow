@@ -2,9 +2,9 @@ import matplotlib.pyplot as plt
 
 # Paths to your .txt files
 
-path_axial_correction1 = 'ArCoMo_Data/ArCoMo14/output/ArCoMo14axial_angle_correctionImage.xyz'
-path_axial_correction2 = 'ArCoMo_Data/ArCoMo14/output/ArCoMo14axial_angle_correctionICP.xyz'
-path_axial_correction3 = 'ArCoMo_Data/ArCoMo14/output/ArCoMo14axial_angle_correctionOverlap.xyz'
+path_axial_correction1 = 'ArCoMo_Data/ArCoMo1/output/ArCoMo1axial_angle_correctionImage.xyz'
+path_axial_correction2 = 'ArCoMo_Data/ArCoMo1/output/ArCoMo1axial_angle_correctionICP.xyz'
+path_axial_correction3 = 'ArCoMo_Data/ArCoMo1/output/ArCoMo1axial_angle_correctionOverlap.xyz'
 
 # Function to read angles from a .txt file
 def read_angles_from_file(file_path):

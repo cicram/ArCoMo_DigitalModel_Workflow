@@ -551,7 +551,7 @@ class center_line_registration:
             normal_vector = centerline_vectors[closest_centerline_point_idx]
 
             # Calculate the transformation matrix to align the spline with the centerline point's vector.
-            source_normal_vector = np.array([0, 0, -1])
+            source_normal_vector = np.array([0, 0, 1])
 
             rotation_matrix = self.rotation_matrix_from_vectors(source_normal_vector, normal_vector)
 

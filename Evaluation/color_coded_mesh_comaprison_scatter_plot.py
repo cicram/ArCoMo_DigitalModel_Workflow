@@ -8,16 +8,17 @@ from scipy.stats import mannwhitneyu
 
 # List of .ply file paths
 
-ArCoMo_number = "300"
+ArCoMo_number = "1400"
 
 ply_files = [
+    'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_No_Correction.ply',
     'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Image_Correction.ply',
     'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_ICP_Correction.ply',
     'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply',
     'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_PureCT.ply'
 ]
 
-names_for_plots = ["Image correlation", "ICP", "Overlap", "Pure CT"]
+names_for_plots = ["No correction", "Image correlation", "ICP", "Overlap", "Pure CT"]
 all_quality_filtered = []  # List to store filtered quality data from all files
 
 for i, ply_file in enumerate(ply_files):
