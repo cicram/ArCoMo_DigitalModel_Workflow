@@ -15,6 +15,7 @@ import cv2 as cv
 import numpy as np
 import math
 from dijkstar import Graph, find_path
+import ast
 
 from workflow_stent_calc_segmentation_calc import ContourDrawer
 
@@ -670,7 +671,7 @@ class oct_extraction:
             cv2.destroyAllWindows()
 
 
-    def get_registration_point(self, input_file, crop_top, crop_bottom,  OCT_start_frame, OCT_registration_frame, display_images, z_offset, save_file, conversion_factor):
+    def get_registration_point(self, use_exisiitng_registration_point, file_path_oct_registration_point, input_file, crop_top, crop_bottom,  OCT_start_frame, OCT_registration_frame, display_images, z_offset, save_file, conversion_factor, path_oct_registration_frame_marked):
         with Image.open(input_file) as im:
             im.seek(OCT_registration_frame)  # Move to marked page (frame)
             image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
@@ -678,16 +679,42 @@ class oct_extraction:
             height, width, channels = image_flipped.shape
             open_cv_image = image_flipped[crop_bottom: height-crop_top, :, ::-1].copy()
 
-            # Display the cropped image
-            cv2.imshow('Select registration point (left mouse click)', open_cv_image)            
+            if use_exisiitng_registration_point:
+                # Check if the file exists
+                if os.path.exists(file_path_oct_registration_point):
+                    # Read information from the file
+                    with open(file_path_oct_registration_point, 'r') as file:
+                        lines = file.readlines()
+                        for line in lines:
+                            key, value = map(str.strip, line.split(':'))
+                        registration_point = ast.literal_eval(value)
+            else:
+                # Display the cropped image
+                cv2.imshow('Select registration point (left mouse click)', open_cv_image)            
 
-            # Set the mouse callback function
-            cv2.setMouseCallback('Select registration point (left mouse click)', self.mouse_callback)
-            # Wait for the user to click on the image
+                # Set the mouse callback function
+                cv2.setMouseCallback('Select registration point (left mouse click)', self.mouse_callback)
+                # Wait for the user to click on the image
+                cv2.waitKey()
+        
+                # Convert into mm unit
+                registration_point = [self.oct_registration_point_x*conversion_factor, self.oct_registration_point_y*conversion_factor, (OCT_registration_frame-OCT_start_frame)*z_offset]
+                
+                # Write the registration point to the file
+                with open(file_path_oct_registration_point, 'w') as file:
+                    # Formatting the registration point as specified
+                    formatted_registration_point = f"registration_point_oct: [{registration_point[0]}, {registration_point[1]}, {registration_point[2]}]"
+                    file.write(formatted_registration_point)
+
+            # Save image with registraction point and show it
+            corrected_x = int(registration_point[0]/conversion_factor)
+            corrected_y = int(registration_point[1]/conversion_factor)
+            cv2.circle(open_cv_image, (corrected_x, corrected_y), 10, (0, 0, 255), -1)
+            cv2.imshow('Selected registration point', open_cv_image)
             cv2.waitKey()
-
-        # Convert into mm unit
-        registration_point = [self.oct_registration_point_x*conversion_factor, self.oct_registration_point_y*conversion_factor, (OCT_registration_frame-OCT_start_frame)*z_offset]
+            cv2.imwrite(path_oct_registration_frame_marked, open_cv_image)
+            cv2.destroyAllWindows()
+ 
         return registration_point
     
 

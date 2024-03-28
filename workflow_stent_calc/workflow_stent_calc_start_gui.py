@@ -35,12 +35,11 @@ class OCTAnalyzerGUI:
         self.processing_info = 0 # 0 is basic processing, 1 is calc processing, 2 is stent processing, 3 is full processing
         self.axial_twist_correction_method = "" # 0 is basic processing, 1 is calc processing, 2 is stent processing, 3 is full processing
 
-
         # Parameters
         self.color1 = (0, 255, 0)  # Green circle
         self.color2 = (192, 220, 192)  # Circle dots color
         # Initialize the z-coordinate for the first image
-        self.z_distance = 0.1  # Increment by 0.2 or 0.1mm
+        self.z_distance = 0.2  # Increment by 0.2 or 0.1mm
 
         # smoothing kernel size and threshold value
         self.smoothing_kernel_size = 15  # Adjust as needed
@@ -78,6 +77,11 @@ class OCTAnalyzerGUI:
         self.correction_method_var.set("Image")
         
         # Checkboxes
+        self.use_existing_registration_point_var = tk.IntVar()
+        self.use_existing_registration_point = ttk.Checkbutton(self.master,
+                                                                text="Use existing registration point",
+                                                                variable=self.use_existing_registration_point_var)
+
         self.save_intermediate_steps_var = tk.IntVar()
         self.check_save_intermediate_steps = ttk.Checkbutton(self.master,
                                                              text="Save Intermediate Steps",
@@ -105,8 +109,8 @@ class OCTAnalyzerGUI:
         self.instructions_text_widget = tk.Text(self.master, height=5, width=40, wrap=tk.WORD, state=tk.NORMAL)
         self.instructions_text_widget.insert(tk.END, instructions_text)
         #self.instructions_text_widget.configure(state=tk.DISABLED)  # Make the text widget read-only
-        self.instructions_label.grid(row=10, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        self.instructions_text_widget.grid(row=11, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.instructions_label.grid(row=12, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.instructions_text_widget.grid(row=13, column=0, columnspan=2, padx=10, pady=5, sticky="w")
         self.label_correction_method = ttk.Label(self.master, text="Axial Twist Correction Method:")
 
         # Layout
@@ -127,13 +131,15 @@ class OCTAnalyzerGUI:
         self.label_correction_method.grid(row=5, column=0, padx=10, pady=5, sticky="w")
         self.correction_method_dropdown.grid(row=5, column=1, padx=10, pady=5)
 
-        self.check_include_calc.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        self.check_include_stent.grid(row=7, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.use_existing_registration_point.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.check_save_intermediate_steps.grid(row=8, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        self.check_display_intermediate_results.grid(row=9, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_include_calc.grid(row=7, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_include_stent.grid(row=8, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.run_button.grid(row=10, column=0, columnspan=2, pady=10)
+        self.check_save_intermediate_steps.grid(row=9, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_display_intermediate_results.grid(row=10, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+
+        self.run_button.grid(row=11, column=0, columnspan=2, pady=10)
 
     def add_instruction_text(self, instruction_text):
         self.instructions_text_widget.configure(state=tk.NORMAL)
@@ -189,6 +195,8 @@ class OCTAnalyzerGUI:
         self.include_calc = self.include_calc_var.get()
         self.include_stent = self.include_stent_var.get()
         self.axial_twist_correction_method = self.correction_method_var.get()
+        self.use_existing_registration_point = self.use_existing_registration_point_var.get()
+
                 #ArCoMo number
         self.arcomo_number = int(self.arcomo_number)
 
@@ -210,7 +218,9 @@ class OCTAnalyzerGUI:
         self.input_file_ct_mesh = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) + '_CT.ply'
         self.path_fused_point_cloud = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_fused_point_cloud.xyz'
 
-
+        # Ouput oct registration image
+        self.path_oct_registration_frame_marked = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/output/ArCoMo{self.arcomo_number}_registration_image_marked_oct.png"
+        
         if self.include_calc and self.include_stent:
             # Run full workflow
             print("full workflow")
@@ -259,9 +269,10 @@ class OCTAnalyzerGUI:
 
         # Get registration point in oct
         oct_extractor = oct_extraction()
-        registration_point_OCT = oct_extractor.get_registration_point(self.input_file_OCT, self.crop_top, self.crop_bottom, self.OCT_start_frame, self.OCT_registration_frame, self.display_results, self.z_distance,
-                                                                   self.save_file, self.conversion_factor)
-
+        file_path_oct_registration_point = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/ArCoMo{self.arcomo_number}_registration_point_oct.txt"
+        registration_point_OCT = oct_extractor.get_registration_point(self.use_existing_registration_point, file_path_oct_registration_point, self.input_file_OCT, self.crop_top, self.crop_bottom, self.OCT_start_frame, self.OCT_registration_frame, self.display_results, self.z_distance,
+                                                                self.save_file, self.conversion_factor, self.path_oct_registration_frame_marked)
+   
         # Update instructions
         instruction_text = "OCT lumen extraction and rotation is performed, please wait and check resulting plot"
         self.add_instruction_text(instruction_text)
