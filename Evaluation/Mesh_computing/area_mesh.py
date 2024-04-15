@@ -101,6 +101,8 @@ def compute_area(points):
 # Load mesh
 #mesh_file = "ArCoMo_Data/ArCoMo3/output/ArCoMo3_shell.stl"
 mesh_file = "C:/Users/JL/Model_evaluation/ArCoMo300/ArCoMo300_Colored_Qaulity_PureCT.ply"
+title_csv = "C:/Users/JL/Model_evaluation/AreaVolumeResults/ArCoMo1400_Colored_Qaulity_PureCT.csv"
+
 # Intersect the mesh with the plane
 mesh = trimesh.load_mesh(mesh_file)
 
@@ -115,46 +117,46 @@ radius = 3
 data = []
 data.append(["Centerline IDX", "Area", "Filter radius"])
 
-for idx, val in enumerate(centerline_points):     
-    flag_except = 0
-    try:
-        # Get the coordinates of the points on the centerline
-        cut_point_3 = centerline_points[idx]
+for idx, val in enumerate(centerline_points):
+    if idx == 650:     
+        flag_except = 0
+        try:
+            # Get the coordinates of the points on the centerline
+            cut_point_3 = centerline_points[idx]
 
-        normal_3 = centerline_points[idx] - centerline_points[idx-1]
+            normal_3 = centerline_points[idx] - centerline_points[idx-1]
 
-        plane_origin_3 = cut_point_3
+            plane_origin_3 = cut_point_3
 
-        plane_polydata_3 = pv.Plane(center=plane_origin_3, direction=normal_3, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
+            plane_polydata_3 = pv.Plane(center=plane_origin_3, direction=normal_3, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
 
-        # Get the Path3D object of the intersection
-        path3D = mesh.section(plane_origin=plane_origin_3, plane_normal=normal_3)
+            # Get the Path3D object of the intersection
+            path3D = mesh.section(plane_origin=plane_origin_3, plane_normal=normal_3)
 
-        # Extract the points from the Path3D object
-        points = np.array([path3D.vertices[i] for entity in path3D.entities for i in entity.points])
-        
-        filtered_points = filter_points_within_radius(points, cut_point_3, 3)
+            # Extract the points from the Path3D object
+            points = np.array([path3D.vertices[i] for entity in path3D.entities for i in entity.points])
+            
+            filtered_points = filter_points_within_radius(points, cut_point_3, 3)
 
-        points_2d = [project_point_to_plane(p, cut_point_3, normal_3)[:2] for p in filtered_points]
+            points_2d = [project_point_to_plane(p, cut_point_3, normal_3)[:2] for p in filtered_points]
 
-        area = compute_area(points_2d)
-        print(area)
-    except: 
-        flag_except = 1
-        
-    if flag_except:
-        data.append([idx, np.nan, radius])
-    else:
-        data.append([idx, area, radius])
+            area = compute_area(points_2d)
+            print(area)
+        except: 
+            flag_except = 1
+            
+        if flag_except:
+            data.append([idx, np.nan, radius])
+        else:
+            data.append([idx, area, radius])
 
-if True:
+if False:
     # Write data to CSV file
-    title_csv = 'data_area_3.csv'
     with open(title_csv, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(data)
 
-if False:
+if True:
     import matplotlib.pyplot as plt
     x = [point[0] for point in points_2d]
     y = [point[1] for point in points_2d]
@@ -176,15 +178,15 @@ if False:
     p.add_mesh(polydata, color="yellow")
 
     # Add original mesh
-    p.add_mesh(mesh, color="red", opacity=0.5, show_edges=True)
+    p.add_mesh(mesh, color="green", opacity=0.3, show_edges=True)
 
     # Add clipped mesh
 
     # Add centerline
-    p.add_points(centerline_points, color="green", point_size=5)
+    p.add_points(centerline_points[idx], color="blue", point_size=5)
 
     # Add first clipping plane
-    p.add_mesh(plane_polydata_3, color="yellow", opacity=0.8)
+    p.add_mesh(plane_polydata_3, color="red", opacity=0.5)
 
     # Add second clipping plane
 
