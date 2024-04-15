@@ -13,21 +13,24 @@ oct_section = 1
 ############################################
 
 # Load the CSV file
-df_gt = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo3_inner_shell.csv')
-df_2 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_Colored_Qaulity_Image_Correction.csv')
-df_3 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_Colored_Qaulity_Overlap_Correction.csv')
-df_4 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_Colored_Qaulity_No_Correction.csv')
-df_5 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_Colored_Qaulity_PureCT.csv')
-df_6 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_Colored_Qaulity_ICP_Correction.csv')
+df_gt = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo3_inner_shell.csv')
+df_2 = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_Colored_Qaulity_Image_Correction.csv')
+df_3 = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_Colored_Qaulity_Overlap_Correction.csv')
+df_4 = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_Colored_Qaulity_No_Correction.csv')
+df_5 = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_Colored_Qaulity_PureCT.csv')
+df_6 = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_Colored_Qaulity_ICP_Correction.csv')
 
-# Plot 'Centerline IDX' vs 'Area'
+
+colors = ['blue', 'green', 'red', 'purple', 'orange']
+
+# Plot 'Centerline IDX' vs 'Volume'
 fig = plt.figure()
-plt.plot(df_gt['Centerline IDX'], df_gt['Volume'], marker='o', linestyle='-', color='b')
-plt.plot(df_2['Centerline IDX'], df_2['Volume'], marker='o', linestyle='-', color='r')
-plt.plot(df_3['Centerline IDX'], df_3['Volume'], marker='o', linestyle='-', color='green')
-plt.plot(df_4['Centerline IDX'], df_4['Volume'], marker='o', linestyle='-', color='y')
-plt.plot(df_5['Centerline IDX'], df_5['Volume'], marker='o', linestyle='-', color='grey')
-plt.plot(df_6['Centerline IDX'], df_6['Volume'], marker='o', linestyle='-', color='black')
+plt.plot(df_gt['Centerline IDX'], df_gt['Volume'], marker='o', linestyle='-', color='black', label='Ground turth')
+plt.plot(df_2['Centerline IDX'], df_2['Volume'], marker='o', linestyle='-', color=colors[0], label='Image correlation')
+plt.plot(df_3['Centerline IDX'], df_3['Volume'], marker='o', linestyle='-', color=colors[1], label='Overlap')
+plt.plot(df_4['Centerline IDX'], df_4['Volume'], marker='o', linestyle='-', color=colors[2], label='No correction')
+plt.plot(df_5['Centerline IDX'], df_5['Volume'], marker='o', linestyle='-', color=colors[3], label='Pure CCTA')
+plt.plot(df_6['Centerline IDX'], df_6['Volume'], marker='o', linestyle='-', color=colors[4], label='ICP')
 
 diff_2 = abs(df_gt['Volume']- df_2['Volume'])
 diff_3 = abs(df_gt['Volume']- df_3['Volume'])
@@ -43,7 +46,8 @@ plt.xlabel('Centerline IDX')
 plt.ylabel('Volume')
 plt.title('Centerline IDX vs Volume')
 plt.grid(True)
-
+plt.legend()
+plt.show()
 
 if oct_section:
     # Assuming the columns for volume measurements are named 'Volume'
@@ -94,7 +98,7 @@ for method, areas in statistical_data.items():
 analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Median Absolute Error','Mean Absolute Error', 'Mean Squared Error', 'Correlation Coefficient'])
 
 # Save the DataFrame to an Excel file
-analysis_df.to_excel('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/statistical_analysis_ArCoMo300.xlsx', index=False)
+analysis_df.to_excel('Model_evaluation/AreaVolumeResults/Volume/statistical_analysis_ArCoMo300.xlsx', index=False)
 
 
 # Bland-Altman Plot
@@ -152,35 +156,39 @@ data = {
 df_linear_regression = pd.DataFrame(data, index=['Image correlation', 'Overlap', 'No correction', 'Pure CT', 'ICP'])
 
 # Save linear regression values to an Excel file
-df_linear_regression.to_excel('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_linear_regression_values.xlsx')
+df_linear_regression.to_excel('Model_evaluation/AreaVolumeResults/Volume/ArCoMo300_linear_regression_values.xlsx')
 
 
 # Plotting
 plt.figure(figsize=(10, 8))
 
-plt.plot(gt_volume, volume_1, 'o', label='Image correlation')
-plt.plot(gt_volume, slope_1 * gt_volume + intercept_1, '--', label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
+# Define colors for each pair of scatter plot and fitted line
+colors = ['blue', 'green', 'red', 'purple', 'orange']
 
-plt.plot(gt_volume, volume_2, 'o', label='Overlap')
-plt.plot(gt_volume, slope_2 * gt_volume + intercept_2, '--', label=f'Fitted Line (slope={slope_2:.2f}, intercept={intercept_2:.2f})')
+# Plotting data points and fitted lines with matching colors
+plt.plot(gt_volume, volume_1, 'o', color=colors[0], label='Image correlation')
+plt.plot(gt_volume, slope_1 * gt_volume + intercept_1, '--', color=colors[0], label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
 
-plt.plot(gt_volume, volume_3, 'o', label='No correction')
-plt.plot(gt_volume, slope_3 * gt_volume + intercept_3, '--', label=f'Fitted Line (slope={slope_3:.2f}, intercept={intercept_3:.2f})')
+plt.plot(gt_volume, volume_2, 'o', color=colors[1], label='Overlap')
+plt.plot(gt_volume, slope_2 * gt_volume + intercept_2, '--', color=colors[1], label=f'Fitted Line (slope={slope_2:.2f}, intercept={intercept_2:.2f})')
 
-plt.plot(gt_volume, volume_4, 'o', label='Pure CT')
-plt.plot(gt_volume, slope_4 * gt_volume + intercept_4, '--', label=f'Fitted Line (slope={slope_4:.2f}, intercept={intercept_4:.2f})')
+plt.plot(gt_volume, volume_3, 'o', color=colors[2], label='No correction')
+plt.plot(gt_volume, slope_3 * gt_volume + intercept_3, '--', color=colors[2], label=f'Fitted Line (slope={slope_3:.2f}, intercept={intercept_3:.2f})')
 
-plt.plot(gt_volume, volume_5, 'o', label='ICP')
-plt.plot(gt_volume, slope_5 * gt_volume + intercept_5, '--', label=f'Fitted Line (slope={slope_5:.2f}, intercept={intercept_5:.2f})')
+plt.plot(gt_volume, volume_4, 'o', color=colors[3], label='Pure CT')
+plt.plot(gt_volume, slope_4 * gt_volume + intercept_4, '--', color=colors[3], label=f'Fitted Line (slope={slope_4:.2f}, intercept={intercept_4:.2f})')
 
-# Plotting the 45-degree line
+plt.plot(gt_volume, volume_5, 'o', color=colors[4], label='ICP')
+plt.plot(gt_volume, slope_5 * gt_volume + intercept_5, '--', color=colors[4], label=f'Fitted Line (slope={slope_5:.2f}, intercept={intercept_5:.2f})')
+
+# Plotting the 45-degree line for reference
 min_val = min(min(gt_volume), min(volume_1), min(volume_2), min(volume_3), min(volume_4), min(volume_5))
 max_val = max(max(gt_volume), max(volume_1), max(volume_2), max(volume_3), max(volume_4), max(volume_5))
-plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Line')
+plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Reference line')
 
-plt.xlabel('Ground Truth Area')
-plt.ylabel('Measured Area')
-plt.title('Measured Areas with Fitted Lines to Ground Truth')
+plt.xlabel('Ground Truth Volume')
+plt.ylabel('Measured Volume')
+plt.title('Measured Volume with Fitted Lines to Ground Truth')
 plt.legend()
 plt.show()
 
@@ -189,21 +197,23 @@ plt.show()
 ############################################
 
 # Load the CSV file
-df_gt = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo14_inner_shell.csv')
-df_2 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_Colored_Qaulity_Image_Correction.csv')
-df_3 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_Colored_Qaulity_Overlap_Correction.csv')
-df_4 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_Colored_Qaulity_No_Correction.csv')
-df_5 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_Colored_Qaulity_PureCT.csv')
-df_6 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_Colored_Qaulity_ICP_Correction.csv')
+df_gt = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo14_inner_shell.csv')
+df_2 = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_Colored_Qaulity_Image_Correction.csv')
+df_3 = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_Colored_Qaulity_Overlap_Correction.csv')
+df_4 = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_Colored_Qaulity_No_Correction.csv')
+df_5 = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_Colored_Qaulity_PureCT.csv')
+df_6 = pd.read_csv('Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_Colored_Qaulity_ICP_Correction.csv')
 
-# Plot 'Centerline IDX' vs 'Area'
+colors = ['blue', 'green', 'red', 'purple', 'orange']
+
+# Plot 'Centerline IDX' vs 'Volume'
 fig = plt.figure()
-plt.plot(df_gt['Centerline IDX'], df_gt['Volume'], marker='o', linestyle='-', color='b')
-plt.plot(df_2['Centerline IDX'], df_2['Volume'], marker='o', linestyle='-', color='r')
-plt.plot(df_3['Centerline IDX'], df_3['Volume'], marker='o', linestyle='-', color='green')
-plt.plot(df_4['Centerline IDX'], df_4['Volume'], marker='o', linestyle='-', color='y')
-plt.plot(df_5['Centerline IDX'], df_5['Volume'], marker='o', linestyle='-', color='grey')
-plt.plot(df_6['Centerline IDX'], df_6['Volume'], marker='o', linestyle='-', color='black')
+plt.plot(df_gt['Centerline IDX'], df_gt['Volume'], marker='o', linestyle='-', color='black', label='Ground turth')
+plt.plot(df_2['Centerline IDX'], df_2['Volume'], marker='o', linestyle='-', color=colors[0], label='Image correlation')
+plt.plot(df_3['Centerline IDX'], df_3['Volume'], marker='o', linestyle='-', color=colors[1], label='Overlap')
+plt.plot(df_4['Centerline IDX'], df_4['Volume'], marker='o', linestyle='-', color=colors[2], label='No correction')
+plt.plot(df_5['Centerline IDX'], df_5['Volume'], marker='o', linestyle='-', color=colors[3], label='Pure CCTA')
+plt.plot(df_6['Centerline IDX'], df_6['Volume'], marker='o', linestyle='-', color=colors[4], label='ICP')
 
 diff_2 = abs(df_gt['Volume']- df_2['Volume'])
 diff_3 = abs(df_gt['Volume']- df_3['Volume'])
@@ -219,7 +229,8 @@ plt.xlabel('Centerline IDX')
 plt.ylabel('Volume')
 plt.title('Centerline IDX vs Volume')
 plt.grid(True)
-
+plt.legend()
+plt.show()
 
 # Assuming the columns for volume measurements are named 'Volume'
 if oct_section:
@@ -270,7 +281,7 @@ for method, areas in statistical_data.items():
 analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Median Absolute Error','Mean Absolute Error', 'Mean Squared Error', 'Correlation Coefficient'])
 
 # Save the DataFrame to an Excel file
-analysis_df.to_excel('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/statistical_analysis_ArCoMo1400.xlsx', index=False)
+analysis_df.to_excel('Model_evaluation/AreaVolumeResults/Volume/statistical_analysis_ArCoMo1400.xlsx', index=False)
 
 # Bland-Altman Plot
 def bland_altman_plot(data1, data2, title='', ax=None):
@@ -327,34 +338,39 @@ data = {
 df_linear_regression = pd.DataFrame(data, index=['Image correlation', 'Overlap', 'No correction', 'Pure CT', 'ICP'])
 
 # Save linear regression values to an Excel file
-df_linear_regression.to_excel('C:/Users/JL/Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_linear_regression_values.xlsx')
+df_linear_regression.to_excel('Model_evaluation/AreaVolumeResults/Volume/ArCoMo1400_linear_regression_values.xlsx')
 
+# Plotting
 # Plotting
 plt.figure(figsize=(10, 8))
 
-plt.plot(gt_volume, volume_1, 'o', label='Image correlation')
-plt.plot(gt_volume, slope_1 * gt_volume + intercept_1, '--', label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
+# Define colors for each pair of scatter plot and fitted line
+colors = ['blue', 'green', 'red', 'purple', 'orange']
 
-plt.plot(gt_volume, volume_2, 'o', label='Overlap')
-plt.plot(gt_volume, slope_2 * gt_volume + intercept_2, '--', label=f'Fitted Line (slope={slope_2:.2f}, intercept={intercept_2:.2f})')
+# Plotting data points and fitted lines with matching colors
+plt.plot(gt_volume, volume_1, 'o', color=colors[0], label='Image correlation')
+plt.plot(gt_volume, slope_1 * gt_volume + intercept_1, '--', color=colors[0], label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
 
-plt.plot(gt_volume, volume_3, 'o', label='No correction')
-plt.plot(gt_volume, slope_3 * gt_volume + intercept_3, '--', label=f'Fitted Line (slope={slope_3:.2f}, intercept={intercept_3:.2f})')
+plt.plot(gt_volume, volume_2, 'o', color=colors[1], label='Overlap')
+plt.plot(gt_volume, slope_2 * gt_volume + intercept_2, '--', color=colors[1], label=f'Fitted Line (slope={slope_2:.2f}, intercept={intercept_2:.2f})')
 
-plt.plot(gt_volume, volume_4, 'o', label='Pure CT')
-plt.plot(gt_volume, slope_4 * gt_volume + intercept_4, '--', label=f'Fitted Line (slope={slope_4:.2f}, intercept={intercept_4:.2f})')
+plt.plot(gt_volume, volume_3, 'o', color=colors[2], label='No correction')
+plt.plot(gt_volume, slope_3 * gt_volume + intercept_3, '--', color=colors[2], label=f'Fitted Line (slope={slope_3:.2f}, intercept={intercept_3:.2f})')
 
-plt.plot(gt_volume, volume_5, 'o', label='ICP')
-plt.plot(gt_volume, slope_5 * gt_volume + intercept_5, '--', label=f'Fitted Line (slope={slope_5:.2f}, intercept={intercept_5:.2f})')
+plt.plot(gt_volume, volume_4, 'o', color=colors[3], label='Pure CT')
+plt.plot(gt_volume, slope_4 * gt_volume + intercept_4, '--', color=colors[3], label=f'Fitted Line (slope={slope_4:.2f}, intercept={intercept_4:.2f})')
 
-# Plotting the 45-degree line
+plt.plot(gt_volume, volume_5, 'o', color=colors[4], label='ICP')
+plt.plot(gt_volume, slope_5 * gt_volume + intercept_5, '--', color=colors[4], label=f'Fitted Line (slope={slope_5:.2f}, intercept={intercept_5:.2f})')
+
+# Plotting the 45-degree line for reference
 min_val = min(min(gt_volume), min(volume_1), min(volume_2), min(volume_3), min(volume_4), min(volume_5))
 max_val = max(max(gt_volume), max(volume_1), max(volume_2), max(volume_3), max(volume_4), max(volume_5))
-plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Line')
+plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Reference line')
 
-plt.xlabel('Ground Truth Area')
-plt.ylabel('Measured Area')
-plt.title('Measured Areas with Fitted Lines to Ground Truth')
+plt.xlabel('Ground Truth Volume')
+plt.ylabel('Measured Volume')
+plt.title('Measured Volume with Fitted Lines to Ground Truth')
 plt.legend()
 plt.show()
 

@@ -4,7 +4,7 @@ from scipy.stats import linregress
 import numpy as np
 
 
-z_score_flag = 1
+z_score_flag = 0
 oct_section = 1
 ############################################
 #ArCoMo1400
@@ -18,15 +18,17 @@ df_4 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Area/ArCoMo14
 df_5 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Area/ArCoMo1400_Colored_Qaulity_PureCT.csv')
 df_6 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Area/ArCoMo1400_Colored_Qaulity_ICP_Correction.csv')
 
+colors = ['blue', 'green', 'red', 'purple', 'orange']
+
 # Plot 'Centerline IDX' vs 'Area'
 fig = plt.figure()
-plt.plot(df_gt['Centerline IDX'], df_gt['Area'], marker='o', linestyle='-', color='b')
-plt.plot(df_2['Centerline IDX'], df_2['Area'], marker='o', linestyle='-', color='r')
-plt.plot(df_3['Centerline IDX'], df_3['Area'], marker='o', linestyle='-', color='green')
-plt.plot(df_4['Centerline IDX'], df_4['Area'], marker='o', linestyle='-', color='y')
-plt.plot(df_5['Centerline IDX'], df_5['Area'], marker='o', linestyle='-', color='grey')
-plt.plot(df_6['Centerline IDX'], df_6['Area'], marker='o', linestyle='-', color='black')
-
+plt.plot(df_gt['Centerline IDX'], df_gt['Area'], marker='o', linestyle='-', color='black', label='Ground turth')
+plt.plot(df_2['Centerline IDX'], df_2['Area'], marker='o', linestyle='-', color=colors[0], label='Image correlation')
+plt.plot(df_3['Centerline IDX'], df_3['Area'], marker='o', linestyle='-', color=colors[1], label='Overlap')
+plt.plot(df_4['Centerline IDX'], df_4['Area'], marker='o', linestyle='-', color=colors[2], label='No correction')
+plt.plot(df_5['Centerline IDX'], df_5['Area'], marker='o', linestyle='-', color=colors[3], label='Pure CCTA')
+plt.plot(df_6['Centerline IDX'], df_6['Area'], marker='o', linestyle='-', color=colors[4], label='ICP')
+plt.legend()
 diff_2 = abs(df_gt['Area']- df_2['Area'])
 diff_3 = abs(df_gt['Area']- df_3['Area'])
 diff_4 = abs(df_gt['Area']- df_4['Area'])
@@ -41,7 +43,7 @@ plt.xlabel('Centerline IDX')
 plt.ylabel('Area')
 plt.title('Centerline IDX vs Area')
 plt.grid(True)
-
+plt.show()
 
 # Assuming the columns for volume measurements are named 'Volume'
 if oct_section:
@@ -154,25 +156,30 @@ df_linear_regression.to_excel('C:/Users/JL/Model_evaluation/AreaVolumeResults/Ar
 # Plotting
 plt.figure(figsize=(10, 8))
 
-plt.plot(gt_volume, volume_1, 'o', label='Image correlation')
-plt.plot(gt_volume, slope_1 * gt_volume + intercept_1, '--', label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
+# Define colors for each pair of scatter plot and fitted line
+colors = ['blue', 'green', 'red', 'purple', 'orange']
 
-plt.plot(gt_volume, volume_2, 'o', label='Overlap')
-plt.plot(gt_volume, slope_2 * gt_volume + intercept_2, '--', label=f'Fitted Line (slope={slope_2:.2f}, intercept={intercept_2:.2f})')
+# Plotting data points and fitted lines with matching colors
+plt.plot(gt_volume, volume_1, 'o', color=colors[0], label='Image correlation')
+plt.plot(gt_volume, slope_1 * gt_volume + intercept_1, '--', color=colors[0], label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
 
-plt.plot(gt_volume, volume_3, 'o', label='No correction')
-plt.plot(gt_volume, slope_3 * gt_volume + intercept_3, '--', label=f'Fitted Line (slope={slope_3:.2f}, intercept={intercept_3:.2f})')
+plt.plot(gt_volume, volume_2, 'o', color=colors[1], label='Overlap')
+plt.plot(gt_volume, slope_2 * gt_volume + intercept_2, '--', color=colors[1], label=f'Fitted Line (slope={slope_2:.2f}, intercept={intercept_2:.2f})')
 
-plt.plot(gt_volume, volume_4, 'o', label='Pure CT')
-plt.plot(gt_volume, slope_4 * gt_volume + intercept_4, '--', label=f'Fitted Line (slope={slope_4:.2f}, intercept={intercept_4:.2f})')
+plt.plot(gt_volume, volume_3, 'o', color=colors[2], label='No correction')
+plt.plot(gt_volume, slope_3 * gt_volume + intercept_3, '--', color=colors[2], label=f'Fitted Line (slope={slope_3:.2f}, intercept={intercept_3:.2f})')
 
-plt.plot(gt_volume, volume_5, 'o', label='ICP')
-plt.plot(gt_volume, slope_5 * gt_volume + intercept_5, '--', label=f'Fitted Line (slope={slope_5:.2f}, intercept={intercept_5:.2f})')
+plt.plot(gt_volume, volume_4, 'o', color=colors[3], label='Pure CT')
+plt.plot(gt_volume, slope_4 * gt_volume + intercept_4, '--', color=colors[3], label=f'Fitted Line (slope={slope_4:.2f}, intercept={intercept_4:.2f})')
 
-# Plotting the 45-degree line
+plt.plot(gt_volume, volume_5, 'o', color=colors[4], label='ICP')
+plt.plot(gt_volume, slope_5 * gt_volume + intercept_5, '--', color=colors[4], label=f'Fitted Line (slope={slope_5:.2f}, intercept={intercept_5:.2f})')
+
+# Plotting the 45-degree line for reference
 min_val = min(min(gt_volume), min(volume_1), min(volume_2), min(volume_3), min(volume_4), min(volume_5))
 max_val = max(max(gt_volume), max(volume_1), max(volume_2), max(volume_3), max(volume_4), max(volume_5))
-plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Line')
+plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Reference line')
+
 
 plt.xlabel('Ground Truth Area')
 plt.ylabel('Measured Area')
@@ -193,15 +200,18 @@ df_4 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Area/ArCoMo30
 df_5 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Area/ArCoMo300_Colored_Qaulity_PureCT.csv')
 df_6 = pd.read_csv('C:/Users/JL/Model_evaluation/AreaVolumeResults/Area/ArCoMo300_Colored_Qaulity_ICP_Correction.csv')
 
+
+colors = ['blue', 'green', 'red', 'purple', 'orange']
+
 # Plot 'Centerline IDX' vs 'Area'
 fig = plt.figure()
-plt.plot(df_gt['Centerline IDX'], df_gt['Area'], marker='o', linestyle='-', color='b')
-plt.plot(df_2['Centerline IDX'], df_2['Area'], marker='o', linestyle='-', color='r')
-plt.plot(df_3['Centerline IDX'], df_3['Area'], marker='o', linestyle='-', color='green')
-plt.plot(df_4['Centerline IDX'], df_4['Area'], marker='o', linestyle='-', color='y')
-plt.plot(df_5['Centerline IDX'], df_5['Area'], marker='o', linestyle='-', color='grey')
-plt.plot(df_6['Centerline IDX'], df_6['Area'], marker='o', linestyle='-', color='black')
-
+plt.plot(df_gt['Centerline IDX'], df_gt['Area'], marker='o', linestyle='-', color='black', label='Ground turth')
+plt.plot(df_2['Centerline IDX'], df_2['Area'], marker='o', linestyle='-', color=colors[0], label='Image correlation')
+plt.plot(df_3['Centerline IDX'], df_3['Area'], marker='o', linestyle='-', color=colors[1], label='Overlap')
+plt.plot(df_4['Centerline IDX'], df_4['Area'], marker='o', linestyle='-', color=colors[2], label='No correction')
+plt.plot(df_5['Centerline IDX'], df_5['Area'], marker='o', linestyle='-', color=colors[3], label='Pure CCTA')
+plt.plot(df_6['Centerline IDX'], df_6['Area'], marker='o', linestyle='-', color=colors[4], label='ICP')
+plt.legend()
 diff_2 = abs(df_gt['Area']- df_2['Area'])
 diff_3 = abs(df_gt['Area']- df_3['Area'])
 diff_4 = abs(df_gt['Area']- df_4['Area'])
@@ -216,6 +226,7 @@ plt.xlabel('Centerline IDX')
 plt.ylabel('Area')
 plt.title('Centerline IDX vs Area')
 plt.grid(True)
+plt.show()
 
 
 if oct_section:
@@ -331,25 +342,30 @@ df_linear_regression.to_excel('C:/Users/JL/Model_evaluation/AreaVolumeResults/Ar
 # Plotting
 plt.figure(figsize=(10, 8))
 
-plt.plot(gt_volume, volume_1, 'o', label='Image correlation')
-plt.plot(gt_volume, slope_1 * gt_volume + intercept_1, '--', label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
+# Define colors for each pair of scatter plot and fitted line
+colors = ['blue', 'green', 'red', 'purple', 'orange']
 
-plt.plot(gt_volume, volume_2, 'o', label='Overlap')
-plt.plot(gt_volume, slope_2 * gt_volume + intercept_2, '--', label=f'Fitted Line (slope={slope_2:.2f}, intercept={intercept_2:.2f})')
+# Plotting data points and fitted lines with matching colors
+plt.plot(gt_volume, volume_1, 'o', color=colors[0], label='Image correlation')
+plt.plot(gt_volume, slope_1 * gt_volume + intercept_1, '--', color=colors[0], label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
 
-plt.plot(gt_volume, volume_3, 'o', label='No correction')
-plt.plot(gt_volume, slope_3 * gt_volume + intercept_3, '--', label=f'Fitted Line (slope={slope_3:.2f}, intercept={intercept_3:.2f})')
+plt.plot(gt_volume, volume_2, 'o', color=colors[1], label='Overlap')
+plt.plot(gt_volume, slope_2 * gt_volume + intercept_2, '--', color=colors[1], label=f'Fitted Line (slope={slope_2:.2f}, intercept={intercept_2:.2f})')
 
-plt.plot(gt_volume, volume_4, 'o', label='Pure CT')
-plt.plot(gt_volume, slope_4 * gt_volume + intercept_4, '--', label=f'Fitted Line (slope={slope_4:.2f}, intercept={intercept_4:.2f})')
+plt.plot(gt_volume, volume_3, 'o', color=colors[2], label='No correction')
+plt.plot(gt_volume, slope_3 * gt_volume + intercept_3, '--', color=colors[2], label=f'Fitted Line (slope={slope_3:.2f}, intercept={intercept_3:.2f})')
 
-plt.plot(gt_volume, volume_5, 'o', label='ICP')
-plt.plot(gt_volume, slope_5 * gt_volume + intercept_5, '--', label=f'Fitted Line (slope={slope_5:.2f}, intercept={intercept_5:.2f})')
+plt.plot(gt_volume, volume_4, 'o', color=colors[3], label='Pure CT')
+plt.plot(gt_volume, slope_4 * gt_volume + intercept_4, '--', color=colors[3], label=f'Fitted Line (slope={slope_4:.2f}, intercept={intercept_4:.2f})')
 
-# Plotting the 45-degree line
+plt.plot(gt_volume, volume_5, 'o', color=colors[4], label='ICP')
+plt.plot(gt_volume, slope_5 * gt_volume + intercept_5, '--', color=colors[4], label=f'Fitted Line (slope={slope_5:.2f}, intercept={intercept_5:.2f})')
+
+# Plotting the 45-degree line for reference
 min_val = min(min(gt_volume), min(volume_1), min(volume_2), min(volume_3), min(volume_4), min(volume_5))
 max_val = max(max(gt_volume), max(volume_1), max(volume_2), max(volume_3), max(volume_4), max(volume_5))
-plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Line')
+plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Reference line')
+
 
 plt.xlabel('Ground Truth Area')
 plt.ylabel('Measured Area')
