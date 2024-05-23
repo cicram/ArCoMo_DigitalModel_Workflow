@@ -217,10 +217,19 @@ class OCTAnalyzerGUI:
         self.input_file_ct_registration_point = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) + '_CT_registration.txt'
         self.input_file_ct_mesh = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) + '_CT.ply'
         self.path_fused_point_cloud = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_fused_point_cloud.xyz'
+        self.path_point_cloud_oct = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_oct.xyz'
+        self.path_point_cloud_ct = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_ct.xyz'
+        self.path_point_cloud_oct_gt = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output_ground_truth/ArCoMo' + str(self.arcomo_number) + '_point_cloud_oct.xyz'
+        self.path_point_cloud_ct_gt = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output_ground_truth/ArCoMo' + str(self.arcomo_number) + '_point_cloud_ct.xyz'
 
         # Ouput oct registration image
         self.path_oct_registration_frame_marked = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/output/ArCoMo{self.arcomo_number}_registration_image_marked_oct.png"
-        
+        self.center_line_output_path = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/output/ArCoMo{self.arcomo_number}_resampled_centerline.txt"
+        self.center_line_registration_points_output_path = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/output/ArCoMo{self.arcomo_number}_centerline_registration_points.txt"
+        self.center_line_output_path_gt = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/output_ground_truth/ArCoMo{self.arcomo_number}_resampled_centerline.txt"
+        self.center_line_registration_points_output_path_gt = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/output_ground_truth/ArCoMo{self.arcomo_number}_centerline_registration_points.txt"
+ 
+
         if self.include_calc and self.include_stent:
             # Run full workflow
             print("full workflow")
@@ -299,6 +308,7 @@ class OCTAnalyzerGUI:
         plt.ylabel("Rotation angle [°]")  # Add a y-axis label
         plt.legend()  # Display the legend
         plt.show()
+
         # Saving the data to a .txt file
         path_axial_correction = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + 'axial_angle_correction'  + str(self.axial_twist_correction_method)  +'.xyz'
 
@@ -340,30 +350,66 @@ class OCTAnalyzerGUI:
             # Restructure frames     
             grouped_stent = center_line_registrator.restructure_point_clouds(oct_stent_point_cloud, self.OCT_start_frame, self.OCT_end_frame, self.z_distance)
 
-
-        # Load marked registration point in CT
+ 
+            # Load marked registration point in CT
         registration_point_CT = center_line_registrator.parse_registration_point_CT(self.input_file_ct_registration_point)
+        
+        if True:
+            # Make smoother bifurication curves of centerline
+            instruction_text = "Make a smooth centerline, by fitting a spline. "
+            self.add_instruction_text(instruction_text)
+            pc_smoother = PointCloudSmoothingVisualizer(self.input_file_centerline, registration_point_CT)
+            smoothed_pc_centerline = pc_smoother.pc_centerline
 
-        # Make smoother bifurication curves of centerline
-        instruction_text = "Make a smooth centerline, by fitting a spline. "
-        self.add_instruction_text(instruction_text)
-        pc_smoother = PointCloudSmoothingVisualizer(self.input_file_centerline, registration_point_CT)
-        smoothed_pc_centerline = pc_smoother.pc_centerline
+            # Resample center line
+            resampled_pc_centerline = center_line_registrator.resample_center_line(smoothed_pc_centerline, self.display_results, self.z_distance)
 
-        # Resample center line
-        resampled_pc_centerline = center_line_registrator.resample_center_line(smoothed_pc_centerline, self.display_results, self.z_distance)
+            # Save centerline
+            with open(self.center_line_output_path, "w") as file:
+                for point in resampled_pc_centerline:
+                    file.write(f"{point[0]} {point[1]} {point[2]}\n")
 
-        # Compute center line vectors, that point from the previous centerline-point to the next centerline-point
-        centerline_vectors = center_line_registrator.find_centerline_vectors(resampled_pc_centerline, self.display_results)
+            # Compute center line vectors, that point from the previous centerline-point to the next centerline-point
+            centerline_vectors = center_line_registrator.find_centerline_vectors(resampled_pc_centerline, self.display_results)
 
-        # Get registration points and compute roation matrix
-        instruction_text = "Select the registration height on the centerline (should be on hight of bifurication). Red for main branch, Blue for side branch, use toggle button to switch"
-        self.add_instruction_text(instruction_text)
+            # Get registration points and compute roation matrix
+            instruction_text = "Select the registration height on the centerline (should be on hight of bifurication). Red for main branch, Blue for side branch, use toggle button to switch"
+            self.add_instruction_text(instruction_text)
 
-        centerline_registration_point_selector = PointCloudRegistrationPointSelectionVisualizer(resampled_pc_centerline, registration_point_CT)
-        centerline_registration_start = centerline_registration_point_selector.selected_point_index_red
-        selected_registration_point_CT = np.array(centerline_registration_point_selector.selected_registration_point_CT)
-        oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(centerline_registration_point_selector.selected_point_index_blue, self.OCT_start_frame, registration_point_CT, resampled_pc_centerline, centerline_registration_start, grouped_OCT_lumen, 
+            centerline_registration_point_selector = PointCloudRegistrationPointSelectionVisualizer(resampled_pc_centerline, registration_point_CT)
+            centerline_registration_start = centerline_registration_point_selector.selected_point_index_red
+            selected_registration_point_CT = np.array(centerline_registration_point_selector.selected_registration_point_CT)
+            centerline_registration_start_side_branch = centerline_registration_point_selector.selected_point_index_blue
+
+            # Save registration points
+            with open(self.center_line_registration_points_output_path, "w") as file:
+                file.write(f"Registration_main_branch_start_idx: {centerline_registration_start}\n")
+                file.write(f"Registration_side_branch_start_idx: {centerline_registration_start_side_branch}\n")        
+      
+                file.write(f"Registration_point: {selected_registration_point_CT[0]} {selected_registration_point_CT[1]} {selected_registration_point_CT[2]}\n")        
+
+#####################################################################################
+# Set to true if you want to use existing centerline !!!!!!
+        if False:
+            registration_points = []
+            with open(self.center_line_registration_points_output_path_gt, 'r') as file:
+                for line in file:
+                    if line.startswith('Registration_main_branch_start_idx:'):
+                        registration_start_idx = int(line.split(':')[1].strip())
+                    elif line.startswith('Registration_side_branch_start_idx:'):
+                        registration_start_side_idx = int(line.split(':')[1].strip())
+                    elif line.startswith('Registration_point:'):
+                        point_data = line.split(':')[1].strip().split()
+                        point = np.array([float(x) for x in point_data])
+                        registration_points.append(point)
+
+            selected_registration_point_CT = np.array(registration_points)[0]
+            centerline_registration_start = registration_start_idx
+            centerline_registration_start_side_branch = registration_start_side_idx
+            resampled_pc_centerline = np.loadtxt(self.center_line_output_path_gt)
+            centerline_vectors = center_line_registrator.find_centerline_vectors(resampled_pc_centerline, self.display_results)
+
+        oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(centerline_registration_start_side_branch, self.OCT_start_frame, registration_point_CT, resampled_pc_centerline, centerline_registration_start, grouped_OCT_lumen, 
                                                                                                                           registration_point_OCT, selected_registration_point_CT, self.OCT_registration_frame, self.z_distance, self.display_results)
 
         if self.display_results or False:
@@ -577,11 +623,24 @@ class OCTAnalyzerGUI:
 
         # Visual point cloud editing:
         point_cloud_visual_editior = point_cloud_visual_editing()
-        point_cloud_visual_editior.run_editor(ct_points, registered_oct_lumen)
+
+        #check if a ground truth point cloud exists
+        if os.path.exists(self.path_point_cloud_oct_gt) and os.path.exists(self.path_point_cloud_ct_gt):
+            point_cloud_oct = np.loadtxt(self.path_point_cloud_oct_gt)
+            point_cloud_ct = np.loadtxt(self.path_point_cloud_ct_gt)
+            point_cloud_visual_editior.run_editor(ct_points, registered_oct_lumen, point_cloud_oct, point_cloud_ct)
+
+        else:
+            point_cloud_visual_editior.run_editor(ct_points, registered_oct_lumen)
 
         # Save the fused point cloud to a text file
         point_cloud_save = point_cloud_visual_editior.fused_point_cloud
         np.savetxt(self.path_fused_point_cloud, point_cloud_save, fmt='%f %f %f')
+        point_cloud_oct = point_cloud_visual_editior.point_cloud1
+        np.savetxt(self.path_point_cloud_oct, point_cloud_oct, fmt='%f %f %f')
+        point_cloud_ct = point_cloud_visual_editior.point_cloud2
+        np.savetxt(self.path_point_cloud_ct, point_cloud_ct, fmt='%f %f %f')
+
         if processing_info == CALC or processing_info == STENT_AND_CALC:
             np.savetxt(self.path_point_cloud_calc, registered_oct_calc, fmt='%f %f %f')
         if processing_info == STENT or processing_info == STENT_AND_CALC:
