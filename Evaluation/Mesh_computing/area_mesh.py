@@ -100,7 +100,7 @@ def compute_area(points):
 
 # Load mesh
 #mesh_file = "ArCoMo_Data/ArCoMo3/output/ArCoMo3_shell.stl"
-mesh_file = "C:/Users/JL/Model_evaluation/ArCoMo300/ArCoMo300_Colored_Qaulity_PureCT.ply"
+mesh_file = "C:/Users/JL/Model_evaluation/ArCoMo300/_Correction.ply"
 title_csv = "C:/Users/JL/Model_evaluation/AreaVolumeResults/ArCoMo1400_Colored_Qaulity_PureCT.csv"
 
 # Intersect the mesh with the plane
