@@ -8,7 +8,7 @@ from scipy.stats import mannwhitneyu
 
 # List of .ply file paths
 
-ArCoMo_number = "1400"
+ArCoMo_number = "300"
 
 ply_files = [
     'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_No_Correction.ply',

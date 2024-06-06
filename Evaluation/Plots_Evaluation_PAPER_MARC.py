@@ -62,12 +62,14 @@ ax.set_ylabel('Y [mm]')
 ax.set_zlabel('Z [mm]')
 
 # Set the title for the plot
-ax.set_title("Vertex distances")
+# ax.set_title("Vertex distances")
 
 # Filter out quality values below 0.05
 abs_quality = abs(quality)
 quality_filtered = abs_quality[abs_quality >= 0.05]#[(quality >= 0.05) | (quality <= -0.05)]
 all_quality_filtered.append(quality_filtered)  # Add filtered quality data to the list
+
+plt.savefig('Evaluation\ArCoMo1400_superimposed')
 
 plt.show()  # Show all histogram and scatter plots
 
@@ -135,8 +137,8 @@ else:
 
 # Plot 'Centerline IDX' vs 'Area'
 fig = plt.figure()
-plt.plot(df_gt['Centerline IDX'][start_idx:end_idx], df_gt['Area'][start_idx:end_idx], marker='o', linestyle='-', color='black', label='Ground turth')
-plt.plot(df_measured['Centerline IDX'][start_idx:end_idx], df_measured['Area'][start_idx:end_idx], marker='o', linestyle='-', color=colors[0], label='Reconstructed')
+plt.plot(df_gt['Centerline IDX'][start_idx:end_idx], df_gt['Area'][start_idx:end_idx], marker='o', linestyle='-', color='black', label='Original Model')
+plt.plot(df_measured['Centerline IDX'][start_idx:end_idx], df_measured['Area'][start_idx:end_idx], marker='o', linestyle='-', color=colors[0], label='Derivative Model')
 
 plt.legend()
 diff = abs(df_gt['Area']- df_measured['Area'])
@@ -145,10 +147,12 @@ diff = abs(df_gt['Area']- df_measured['Area'])
 
 import numpy as np
 #print(f"Mean{np.mean(diff[500:800])}, SD: {np.std(diff[500:800])}")
-plt.xlabel('Centerline IDX')
-plt.ylabel('Area')
-plt.title('Centerline IDX vs Area')
+plt.xlabel('Centerline Index [-]')
+plt.ylabel(r'Area [mm^2]')
+# plt.title('Centerline IDX vs Area')
 plt.grid(True)
+
+plt.savefig('Evaluation\ArCoMo1400_area_diff')
 plt.show()
 
 # Assuming the columns for volume measurements are named 'Volume'
