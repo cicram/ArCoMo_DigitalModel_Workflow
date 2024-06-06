@@ -524,7 +524,7 @@ class center_line_registration:
         return oct_lumen, oct_calc 
 
     def register_OCT_frames_onto_centerline(self, grouped_OCT_frames, centerline_registration_start, centerline_vectors,
-                                            resampled_pc_centerline, OCT_registration_frame, OCT_start_frame, z_distance, rotated_registration_point_OCT, save_file, display_results):
+                                            resampled_pc_centerline, OCT_registration_frame, OCT_start_frame, z_distance, rotated_registration_point_OCT, rotated_registration_point_OCT_2, rotated_registration_point_OCT_3, rotated_registration_point_OCT_4, save_file, display_results):
         saved_registered_splines = []
         rotated_vectors = []
         target_centerline_point_display = []
@@ -632,10 +632,21 @@ class center_line_registration:
             # Save registration point
             if z_level == z_level_registration:
             # Write the coordinates to the text file
-                rotated_registration_point_OCT = np.dot(rotation_matrix, rotated_registration_point_OCT.T).T  # Apply rotation
-                if save_file:
-                    with open("workflow_processed_data_output/rotated_OCT_registration_point.txt", 'w') as file:
+                if False:
+                    rotated_registration_point_OCT = np.dot(rotation_matrix, rotated_registration_point_OCT.T).T  # Apply rotation
+                    rotated_registration_point_OCT_2 = np.dot(rotation_matrix, rotated_registration_point_OCT_2.T).T  # Apply rotation
+                    rotated_registration_point_OCT_3 = np.dot(rotation_matrix, rotated_registration_point_OCT_3.T).T  # Apply rotation
+                    rotated_registration_point_OCT_4 = np.dot(rotation_matrix, rotated_registration_point_OCT_4.T).T  # Apply rotation
+
+                if save_file or True:
+                    with open("workflow_processed_data_output/rotated_OCT_registration_point.xyz", 'w') as file:
                         file.write(f"{rotated_registration_point_OCT[0]:.2f} {rotated_registration_point_OCT[1]:.2f} {rotated_registration_point_OCT[2]:.2f}\n")
+                    with open("workflow_processed_data_output/rotated_OCT_registration_point2.xyz", 'w') as file:
+                        file.write(f"{rotated_registration_point_OCT_2[0]:.2f} {rotated_registration_point_OCT_2[1]:.2f} {rotated_registration_point_OCT_2[2]:.2f}\n")
+                    with open("workflow_processed_data_output/rotated_OCT_registration_point3.xyz", 'w') as file:
+                        file.write(f"{rotated_registration_point_OCT_3[0]:.2f} {rotated_registration_point_OCT_3[1]:.2f} {rotated_registration_point_OCT_3[2]:.2f}\n")
+                    with open("workflow_processed_data_output/rotated_OCT_registration_point4.xyz", 'w') as file:
+                        file.write(f"{rotated_registration_point_OCT_4[0]:.2f} {rotated_registration_point_OCT_4[1]:.2f} {rotated_registration_point_OCT_4[2]:.2f}\n")
 
             # Save rotation and translation
             with open("workflow_processed_data_output/image_translations/centerline_registration_rotation.txt", 'a') as file:
@@ -687,19 +698,46 @@ class center_line_registration:
         return oct_points 
 
 
-    def get_oct_lumen_rotation_matrix(self, blue_point, OCT_start_frame, orig_regpoint, resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_CT, OCT_registration_frame, z_distance, display_results):
+    def get_oct_lumen_rotation_matrix(self, blue_point, OCT_start_frame, orig_regpoint, resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_OCT_2, registration_point_OCT_3, registration_point_OCT_4, registration_point_CT, OCT_registration_frame, z_distance, display_results):
         target_centerline_point = resampled_pc_centerline[centerline_registration_start]
+        target_centerline_point_2 = resampled_pc_centerline[centerline_registration_start - (219-203)]
+        target_centerline_point_3 = resampled_pc_centerline[centerline_registration_start - (288-203)]
+        target_centerline_point_4 = resampled_pc_centerline[centerline_registration_start - (297-203)]
+
         blue_point_ = resampled_pc_centerline[blue_point]
 
         # find correct frame
-        registration_frame = grouped_OCT_frames[round(grouped_OCT_frames[0][0][2] - ((OCT_registration_frame - OCT_start_frame)* z_distance), 1)]
+        registration_frame = grouped_OCT_frames[round(grouped_OCT_frames[0.4][0][2] - ((OCT_registration_frame - OCT_start_frame)* z_distance), 1)]
         registered_frame = np.array(registration_frame)  # Copy the frame points
+        registration_frame_2 = grouped_OCT_frames[round(grouped_OCT_frames[0.4][0][2] - ((219 - OCT_start_frame)* z_distance), 1)]
+        registered_frame_2 = np.array(registration_frame_2)  # Copy the frame points
+        registration_frame_3 = grouped_OCT_frames[round(grouped_OCT_frames[0.4][0][2] - ((288 - OCT_start_frame)* z_distance), 1)]
+        registered_frame_3 = np.array(registration_frame_3)  # Copy the frame points
+        registration_frame_4 = grouped_OCT_frames[round(grouped_OCT_frames[0.4][0][2] - ((294 - OCT_start_frame)* z_distance), 1)]
+        registered_frame_4 = np.array(registration_frame_4)  # Copy the frame points
 
         # Perform the translation to center the spline and registration point on the centerline point.
         translation_vector = target_centerline_point - registered_frame.mean(axis=0)
         registered_frame += translation_vector
+
+        translation_vector_2 = target_centerline_point_2 - registered_frame_2.mean(axis=0)
+        registered_frame_2 += translation_vector_2
+
+        translation_vector_3 = target_centerline_point_3 - registered_frame_3.mean(axis=0)
+        registered_frame_3 += translation_vector_3
+
+        translation_vector_4 = target_centerline_point_4 - registered_frame_4.mean(axis=0)
+        registered_frame_4 += translation_vector_4
+
         registration_point_OCT = np.array(registration_point_OCT[0])
         registration_point_OCT += translation_vector
+        registration_point_OCT_2 = np.array(registration_point_OCT_2[0])
+        registration_point_OCT_2 += translation_vector_2
+        registration_point_OCT_3 = np.array(registration_point_OCT_3[0])
+        registration_point_OCT_3 += translation_vector_3
+        registration_point_OCT_4 = np.array(registration_point_OCT_4[0])
+        registration_point_OCT_4 += translation_vector_4
+
         if display_results:
             plt.plot(registered_frame[:, 0], registered_frame[:, 1], "x")
             plt.plot(registration_point_OCT[0], registration_point_OCT[1], "o",color="yellow")
@@ -720,21 +758,36 @@ class center_line_registration:
         rotation_matrix = self.rotation_matrix_from_vectors(vector_oct_registration_point, vector_ct_registration_point)
         rotation_angle = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
 
-        # Convert the angle from radians to degrees if needed
         rotated_registration_point = np.dot(rotation_matrix, registration_point_OCT.T).T 
+        rotated_registration_point_2 = np.dot(rotation_matrix, registration_point_OCT_2.T).T 
+        rotated_registration_point_3 = np.dot(rotation_matrix, registration_point_OCT_3.T).T 
+        rotated_registration_point_4 = np.dot(rotation_matrix, registration_point_OCT_4.T).T 
 
         rotated_frame = np.dot(registered_frame, rotation_matrix.T)
+        rotated_frame_2 = np.dot(registered_frame_2, rotation_matrix.T)
+        rotated_frame_3 = np.dot(registered_frame_3, rotation_matrix.T)
+        rotated_frame_4 = np.dot(registered_frame_4, rotation_matrix.T)
+
         translation_vector = target_centerline_point - rotated_frame.mean(axis=0)
         rotated_frame += translation_vector
+        translation_vector_2 = target_centerline_point_2 - rotated_frame_2.mean(axis=0)
+        rotated_frame_2 += translation_vector_2
+        translation_vector_3 = target_centerline_point_3 - rotated_frame_3.mean(axis=0)
+        rotated_frame_3 += translation_vector_3
+        translation_vector_4 = target_centerline_point_4 - rotated_frame_4.mean(axis=0)
+        rotated_frame_4 += translation_vector_4
         rotated_registration_point += translation_vector
+        rotated_registration_point_2 += translation_vector_2
+        rotated_registration_point_3 += translation_vector_3
+        rotated_registration_point_4 += translation_vector_4
 
         if display_results:
-            plt.plot(registered_frame[:, 0], registered_frame[:, 1], "x", color="red")
-            plt.plot(registration_point_OCT[0], registration_point_OCT[1], "o", color="red")
-            plt.plot(rotated_registration_point[0], rotated_registration_point[1], "o", color="blue")
-            plt.plot(rotated_frame[:, 0], rotated_frame[:, 1], "x", color="blue")
+            plt.plot(registered_frame_2[:, 0], registered_frame_2[:, 1], "x", color="red")
+            plt.plot(registration_point_OCT_2[0], registration_point_OCT_2[1], "o", color="red")
+            plt.plot(rotated_registration_point_2[0], rotated_registration_point_2[1], "o", color="blue")
+            plt.plot(rotated_frame_2[:, 0], rotated_frame_2[:, 1], "x", color="blue")
             plt.plot(registration_point_CT[0], registration_point_CT[1], "x", color="black")
-            plt.plot(target_centerline_point[0], target_centerline_point[1], "x", color="green")
+            plt.plot(target_centerline_point_2[0], target_centerline_point_2[1], "x", color="green")
 
 
             plt.show()
@@ -784,7 +837,7 @@ class center_line_registration:
             plt.title('Registered Splines for the First 3 Z-Levels')
             plt.show()
 
-        return rotation_matrix, rotated_registration_point
+        return rotation_matrix, rotated_registration_point, rotated_registration_point_2, rotated_registration_point_3, rotated_registration_point_4
 
 
     def rotation_matrix_from_vectors_x_y(self, vec1, vec2):

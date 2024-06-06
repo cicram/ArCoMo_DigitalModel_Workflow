@@ -39,7 +39,7 @@ class OCTAnalyzerGUI:
         self.color1 = (0, 255, 0)  # Green circle
         self.color2 = (192, 220, 192)  # Circle dots color
         # Initialize the z-coordinate for the first image
-        self.z_distance = 0.2  # Increment by 0.2 or 0.1mm
+        self.z_distance = 0.22  # Increment by 0.2 or 0.1mm
 
         # smoothing kernel size and threshold value
         self.smoothing_kernel_size = 15  # Adjust as needed
@@ -281,7 +281,21 @@ class OCTAnalyzerGUI:
         file_path_oct_registration_point = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/ArCoMo{self.arcomo_number}_registration_point_oct.txt"
         registration_point_OCT = oct_extractor.get_registration_point(self.use_existing_registration_point, file_path_oct_registration_point, self.input_file_OCT, self.crop_top, self.crop_bottom, self.OCT_start_frame, self.OCT_registration_frame, self.display_results, self.z_distance,
                                                                 self.save_file, self.conversion_factor, self.path_oct_registration_frame_marked)
-   
+        registration_point_OCT_2_frame = 219
+        registration_point_OCT_3_frame = 288
+        registration_point_OCT_4_frame = 297
+        file_path_oct_registration_point = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/ArCoMo{self.arcomo_number}_registration_point_oct2.txt"
+
+        registration_point_OCT_2 = oct_extractor.get_registration_point(self.use_existing_registration_point, file_path_oct_registration_point, self.input_file_OCT, self.crop_top, self.crop_bottom, self.OCT_start_frame, registration_point_OCT_2_frame, self.display_results, self.z_distance,
+                                                                self.save_file, self.conversion_factor, self.path_oct_registration_frame_marked)
+        
+        file_path_oct_registration_point = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/ArCoMo{self.arcomo_number}_registration_point_oct3.txt"
+        registration_point_OCT_3 = oct_extractor.get_registration_point(self.use_existing_registration_point, file_path_oct_registration_point, self.input_file_OCT, self.crop_top, self.crop_bottom, self.OCT_start_frame, registration_point_OCT_3_frame, self.display_results, self.z_distance,
+                                                                self.save_file, self.conversion_factor, self.path_oct_registration_frame_marked)
+        
+        file_path_oct_registration_point = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/ArCoMo{self.arcomo_number}_registration_point_oct4.txt"
+        registration_point_OCT_4 = oct_extractor.get_registration_point(self.use_existing_registration_point, file_path_oct_registration_point, self.input_file_OCT, self.crop_top, self.crop_bottom, self.OCT_start_frame, registration_point_OCT_4_frame, self.display_results, self.z_distance,
+                                                                self.save_file, self.conversion_factor, self.path_oct_registration_frame_marked)  
         # Update instructions
         instruction_text = "OCT lumen extraction and rotation is performed, please wait and check resulting plot"
         self.add_instruction_text(instruction_text)
@@ -302,6 +316,8 @@ class OCTAnalyzerGUI:
             oct_rotation_angles = oct_extractor.get_rotation_matrix_overlap(oct_lumen_contours, self.z_distance, self.crop_top, self.crop_bottom, self.conversion_factor) 
         
 
+        oct_rotation_angles = np.zeros_like(oct_rotation_angles)
+
         import  matplotlib.pyplot as plt
         plt.plot(oct_rotation_angles, label="Axial rotation angles")  # Add a label to your plot for the legend
         plt.xlabel("OCT pullback image")  # Add an x-axis label
@@ -319,6 +335,9 @@ class OCTAnalyzerGUI:
         # Align oct frames and registration point
         oct_lumen_point_cloud = oct_extractor.frames_alignment(oct_lumen_contours, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
         registration_point_OCT = oct_extractor.frames_alignment(registration_point_OCT, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
+        registration_point_OCT_2 = oct_extractor.frames_alignment(registration_point_OCT_2, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
+        registration_point_OCT_3 = oct_extractor.frames_alignment(registration_point_OCT_3, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
+        registration_point_OCT_4 = oct_extractor.frames_alignment(registration_point_OCT_4, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
      
         # Restructure frames
         center_line_registrator = center_line_registration()
@@ -409,8 +428,8 @@ class OCTAnalyzerGUI:
             resampled_pc_centerline = np.loadtxt(self.center_line_output_path_gt)
             centerline_vectors = center_line_registrator.find_centerline_vectors(resampled_pc_centerline, self.display_results)
 
-        oct_lumen_rotation_matrix, rotated_registration_point_OCT = center_line_registrator.get_oct_lumen_rotation_matrix(centerline_registration_start_side_branch, self.OCT_start_frame, registration_point_CT, resampled_pc_centerline, centerline_registration_start, grouped_OCT_lumen, 
-                                                                                                                          registration_point_OCT, selected_registration_point_CT, self.OCT_registration_frame, self.z_distance, self.display_results)
+        oct_lumen_rotation_matrix, rotated_registration_point_OCT, rotated_registration_point_OCT_2 , rotated_registration_point_OCT_3 , rotated_registration_point_OCT_4 = center_line_registrator.get_oct_lumen_rotation_matrix(centerline_registration_start_side_branch, self.OCT_start_frame, registration_point_CT, resampled_pc_centerline, centerline_registration_start, grouped_OCT_lumen, 
+                                                                                                                          registration_point_OCT, registration_point_OCT_2, registration_point_OCT_3, registration_point_OCT_4, selected_registration_point_CT, self.OCT_registration_frame, self.z_distance, self.display_results)
 
         if self.display_results or False:
             #------------------------------------------#
@@ -536,14 +555,13 @@ class OCTAnalyzerGUI:
         #register frames onto centerline
         if processing_info == BASIC:
             registered_oct_lumen = center_line_registrator.register_OCT_frames_onto_centerline(rotated_grouped_OCT_lumen, centerline_registration_start, centerline_vectors,
-                                                                                                resampled_pc_centerline, self.OCT_registration_frame, self.OCT_start_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
+                                                                                                resampled_pc_centerline, self.OCT_registration_frame, self.OCT_start_frame, self.z_distance, rotated_registration_point_OCT, rotated_registration_point_OCT_2, rotated_registration_point_OCT_3, rotated_registration_point_OCT_4, self.save_file, self.display_results)
         if processing_info == STENT or processing_info == STENT_AND_CALC:
             registered_oct_lumen, registered_oct_stent = center_line_registrator.register_OCT_frames_onto_centerline_stent(rotated_grouped_OCT_lumen, rotated_grouped_OCT_stent,centerline_registration_start, centerline_vectors,
                                                                                                 resampled_pc_centerline, self.OCT_registration_frame, self.OCT_start_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
         if processing_info == CALC or processing_info == STENT_AND_CALC:
             registered_oct_lumen, registered_oct_calc = center_line_registrator.register_OCT_frames_onto_centerline_calc(rotated_grouped_OCT_lumen, rotated_grouped_OCT_calc, centerline_registration_start, centerline_vectors,
                                                                                                 resampled_pc_centerline, self.OCT_registration_frame, self.OCT_start_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
-
         if self.display_results or False:
             #------------------------------------------#
             import matplotlib.pyplot as plt
