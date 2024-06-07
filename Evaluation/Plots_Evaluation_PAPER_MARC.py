@@ -67,7 +67,6 @@ ax.set_zlabel('Z [mm]')
 # Filter out quality values below 0.05
 abs_quality = abs(quality)
 quality_filtered = abs_quality[abs_quality >= 0.05]#[(quality >= 0.05) | (quality <= -0.05)]
-all_quality_filtered.append(quality_filtered)  # Add filtered quality data to the list
 
 plt.savefig('Evaluation\ArCoMo1400_superimposed')
 
@@ -158,23 +157,23 @@ plt.show()
 # Assuming the columns for volume measurements are named 'Volume'
 if oct_section:
     gt_volume = df_gt['Area'][start_idx:end_idx]
-    volume_1 = df_measured['Area'][start_idx:end_idx]       
+    area1 = df_measured['Area'][start_idx:end_idx]       
 else:
     gt_volume = df_gt['Area']
-    volume_1 = df_measured['Area']
+    area1 = df_measured['Area']
 
 if z_score_flag:
     # Z-score normalization
     gt_volume = (gt_volume - gt_volume.mean()) / gt_volume.std()
-    volume_1 = (volume_1 - volume_1.mean()) / volume_1.std()
+    area1 = (area1 - area1.mean()) / area1.std()
 
 analysis_data = []
 
-abs_errors = np.abs(volume_1 - gt_volume)
+abs_errors = np.abs(area1 - gt_volume)
 mean_abs_error = np.mean(abs_errors)
 median_abs_error = np.median(abs_errors)
 max_abs_error = np.max(abs_errors)
-mean_squared_error = np.mean((volume_1 - gt_volume) ** 2)
+mean_squared_error = np.mean((area1 - gt_volume) ** 2)
 std_abs_error = np.std(abs_errors)
 
 analysis_data.append(["Overlap", max_abs_error, mean_abs_error, median_abs_error, mean_squared_error, std_abs_error])
@@ -193,7 +192,7 @@ analysis_df.to_excel(file_path, index=False)
 ################################################################################
 
 # Fit lines between ground truth volumes and volumes of other methods
-slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(gt_volume, volume_1)
+slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(gt_volume, area1)
 
 
 # Calculate R-squared
@@ -201,7 +200,7 @@ r_squared_1 = r_value_1 ** 2
 
 # Calculate Pearson correlation coefficient
 from scipy.stats import pearsonr
-pearson_corr, _ = pearsonr(gt_volume, volume_1)
+pearson_corr, _ = pearsonr(gt_volume, area1)
 
 # Create a DataFrame for linear regression values
 data = {
@@ -230,12 +229,12 @@ plt.figure(figsize=(10, 8))
 colors = ['green', 'red', 'purple', 'orange']
 
 # Plotting data points and fitted lines with matching colors
-plt.plot(gt_volume, volume_1, 'o', color=colors[0], label='Image correlation')
+plt.plot(gt_volume, area1, 'o', color=colors[0], label='Image correlation')
 plt.plot(gt_volume, slope_1 * gt_volume + intercept_1, '--', color=colors[0], label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
 
 # Plotting the 45-degree line for reference
-min_val = min(min(gt_volume), min(volume_1))
-max_val = max(max(gt_volume), max(volume_1))
+min_val = min(min(gt_volume), min(area1))
+max_val = max(max(gt_volume), max(area1))
 plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Reference line')
 
 plt.xlabel('Ground Truth Area')
