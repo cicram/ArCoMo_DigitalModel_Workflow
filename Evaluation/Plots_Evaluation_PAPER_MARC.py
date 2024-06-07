@@ -8,8 +8,8 @@ from scipy.stats import mannwhitneyu
 
 # List of .ply file paths
 
-ArCoMo_number = "1400"
-ArCoMo_number_gt = "14"
+ArCoMo_number = "300"
+ArCoMo_number_gt = "3"
 
 ply_file = 'Evaluation/MARC_PAPER/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply'
 
@@ -37,7 +37,7 @@ z_shifted = z - np.min(z)
 
 # Histogram
 fig = plt.figure()
-plt.hist(quality_normalized[quality_normalized >=0.05], bins=100, color='blue', edgecolor='black')
+plt.hist(quality_abs[quality_abs >=0.03], bins=100, color='blue', edgecolor='black')
 plt.title("Histrogram of vertex distances")
 plt.xlabel('Vertex distances [mm]')
 plt.ylabel('Number of vertex points')
@@ -66,7 +66,7 @@ ax.set_zlabel('Z [mm]')
 
 # Filter out quality values below 0.05
 abs_quality = abs(quality)
-quality_filtered = abs_quality[abs_quality >= 0.05]#[(quality >= 0.05) | (quality <= -0.05)]
+quality_filtered = abs_quality[abs_quality >= 0.03]#[(quality >= 0.05) | (quality <= -0.05)]
 
 plt.savefig('Evaluation\ArCoMo1400_superimposed')
 
@@ -176,10 +176,25 @@ max_abs_error = np.max(abs_errors)
 mean_squared_error = np.mean((area1 - gt_volume) ** 2)
 std_abs_error = np.std(abs_errors)
 
+
+fig = plt.figure()
+plt.hist(abs_errors, bins=40, color='blue', edgecolor='black')
+# Add lines for mean, median, and std
+plt.axvline(mean_abs_error, color='r', linestyle='dashed', linewidth=1, label=f'Mean: {mean_abs_error:.2f}')
+plt.axvline(median_abs_error, color='g', linestyle='dashed', linewidth=1, label=f'Median: {median_abs_error:.2f}')
+plt.axvline(mean_abs_error + std_abs_error, color='orange', linestyle='dashed', linewidth=1, label=f'Std Dev: {std_abs_error:.2f}')
+plt.axvline(mean_abs_error - std_abs_error, color='orange', linestyle='dashed', linewidth=1)
+
+plt.title("Histrogram of Are difference")
+plt.xlabel('Area diff [mm]')
+plt.legend()
+plt.ylabel('Number of areas')
+plt.show() 
+
 analysis_data.append(["Overlap", max_abs_error, mean_abs_error, median_abs_error, mean_squared_error, std_abs_error])
 
 # Create a DataFrame for the statistical analysis data
-analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Median Absolute Error','Mean Absolute Error', 'Mean Squared Error', 'Std Absolute Error'])
+analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Mean Absolute Error','Median Absolute Error', 'Mean Squared Error', 'Std Absolute Error'])
 
 # Save the DataFrame to an Excel file
 file_path = f"{folder_path}statistical_results_area_difference_comparison.xlsx"
