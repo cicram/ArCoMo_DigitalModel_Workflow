@@ -8,8 +8,8 @@ from scipy.stats import mannwhitneyu
 
 # List of .ply file paths
 
-ArCoMo_number = "300"
-ArCoMo_number_gt = "3"
+ArCoMo_number = "1400"
+ArCoMo_number_gt = "14"
 
 ply_file = 'Evaluation/MARC_PAPER/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply'
 
@@ -48,6 +48,7 @@ cmap = cm.get_cmap('RdYlGn_r')
 # Create a 3D plot
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
+fig.subplots_adjust(left=0, bottom=0.055, right=0.798, top=1,  wspace=0.2, hspace=0.2)
 sc = ax.scatter(x_shifted, y_shifted, z_shifted, c=cmap(quality_normalized))
 
 # Add a colorbar
@@ -147,7 +148,7 @@ diff = abs(df_gt['Area']- df_measured['Area'])
 import numpy as np
 #print(f"Mean{np.mean(diff[500:800])}, SD: {np.std(diff[500:800])}")
 plt.xlabel('Centerline Index [-]')
-plt.ylabel(r'Area [mm^2]')
+plt.ylabel(r'Area [mm$^2$]')
 # plt.title('Centerline IDX vs Area')
 plt.grid(True)
 
@@ -201,6 +202,20 @@ file_path = f"{folder_path}statistical_results_area_difference_comparison.xlsx"
 
 analysis_df.to_excel(file_path, index=False)
 
+# Bland-Altman
+
+area_diff = area1 - gt_volume
+area_mean = np.mean([area1,gt_volume], axis=0)
+mean_diff = np.mean(area_diff)
+std_diff = np.std(area_diff)
+
+plt.scatter(area_mean, area_diff, alpha=0.6)
+plt.axhline(mean_diff, linestyle ='--')
+plt.axhline(mean_diff+std_diff, linestyle ='--',color='r')
+plt.axhline(mean_diff-std_diff, linestyle ='--',color='r')
+plt.grid(True)
+
+plt.show()
 
 ################################################################################
 # LINEAR REGRESSION 
