@@ -1,11 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.spatial.transform import Rotation
 from scipy.interpolate import splprep, splev
-import cv2
 import numpy as np
-from PIL import Image
-import vtkmodules.all as vtk
 
 class center_line_registration:
     def parse_alignement(self, file_path):

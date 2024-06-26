@@ -1,7 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import splprep, splev
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.widgets import Button
 from matplotlib.lines import Line2D
 

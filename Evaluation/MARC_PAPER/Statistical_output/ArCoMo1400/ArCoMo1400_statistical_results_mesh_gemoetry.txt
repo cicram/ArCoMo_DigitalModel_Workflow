@@ -1,5 +1,0 @@
-Min: 0.03 mm
-Max: 0.72 mm
-Median: 0.13 mm
-Mean: 0.16 mm
-Std Dev: 0.11 mm
