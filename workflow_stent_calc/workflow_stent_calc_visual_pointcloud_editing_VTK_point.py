@@ -19,6 +19,7 @@ class point_cloud_visual_editing:
         self.radius_text_actor = None
         self.fused_point_cloud = None
         self.previous_points_state = 0
+        self.pointSize = 3
     # Data parsing functions
 
     def parse_lumen_point_cloud(self, file_path):
@@ -139,12 +140,12 @@ class point_cloud_visual_editing:
         if self.switch_state == 0:
             self.renderer.RemoveActor(self.actor2)
             self.actor2 = self.create_point_cloud_actor(self.point_cloud2, [0, 0, 1])
-            self.actor2.GetProperty().SetPointSize(5)
+            self.actor2.GetProperty().SetPointSize(self.pointSize)
             self.renderer.AddActor(self.actor2)
         else:
             self.renderer.RemoveActor(self.actor1)
             self.actor1 = self.create_point_cloud_actor(self.point_cloud1, [1, 0, 0])
-            self.actor1.GetProperty().SetPointSize(5)
+            self.actor1.GetProperty().SetPointSize(self.pointSize)
             self.renderer.AddActor(self.actor1)
         self.render_window.Render()
 
@@ -282,8 +283,8 @@ class point_cloud_visual_editing:
         self.actor1 = self.create_point_cloud_actor(self.point_cloud1, [1, 0, 0])
         self.actor2 = self.create_point_cloud_actor(self.point_cloud2, [0, 0, 1])
 
-        self.actor1.GetProperty().SetPointSize(5)
-        self.actor2.GetProperty().SetPointSize(5)
+        self.actor1.GetProperty().SetPointSize(self.pointSize)
+        self.actor2.GetProperty().SetPointSize(self.pointSize)
 
         # previous run points
         self.point_cloud3 = oct_points_previous
