@@ -5,6 +5,8 @@ from matplotlib import cm
 from plyfile import PlyData, PlyElement
 from matplotlib.cm import ScalarMappable
 from scipy.stats import mannwhitneyu
+import scipy.stats as stats
+import pylab
 
 # List of .ply file paths
 
@@ -177,6 +179,8 @@ max_abs_error = np.max(abs_errors)
 mean_squared_error = np.mean((area1 - gt_volume) ** 2)
 std_abs_error = np.std(abs_errors)
 
+stats.probplot((area1 - gt_volume), dist='norm',plot=pylab)
+pylab.show()
 
 fig = plt.figure()
 plt.hist(abs_errors, bins=40, color='blue', edgecolor='black')
