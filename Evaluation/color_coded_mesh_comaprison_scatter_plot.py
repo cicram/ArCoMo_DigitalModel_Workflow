@@ -103,10 +103,11 @@ for i, quality_filtered in enumerate(all_quality_filtered):
 plt.tight_layout()
 plt.show()
 
+if False:
 
-from scipy.stats import kruskal
-import scikit_posthocs as sp
-import statsmodels.stats.multitest as smm
+    from scipy.stats import kruskal
+    import scikit_posthocs as sp
+    import statsmodels.stats.multitest as smm
 
 # Kruskal-Wallis Test: This non-parametric test checks if there are statistically significant 
 # differences between the medians of three or more independent samples. 

@@ -100,7 +100,9 @@ def compute_area(points):
 
 # Load mesh
 #mesh_file = "ArCoMo_Data/ArCoMo3/output/ArCoMo3_shell.stl"
-mesh_file = "C:/Users/JL/Model_evaluation/ArCoMo300/_Correction.ply"
+ArCoMo_number = '300'
+mesh_file = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply' 
+
 title_csv = "C:/Users/JL/Model_evaluation/AreaVolumeResults/ArCoMo1400_Colored_Qaulity_PureCT.csv"
 
 # Intersect the mesh with the plane
@@ -118,7 +120,7 @@ data = []
 data.append(["Centerline IDX", "Area", "Filter radius"])
 
 for idx, val in enumerate(centerline_points):
-    if idx == 650:     
+    if idx == 600:     
         flag_except = 0
         try:
             # Get the coordinates of the points on the centerline
@@ -149,7 +151,37 @@ for idx, val in enumerate(centerline_points):
             data.append([idx, np.nan, radius])
         else:
             data.append([idx, area, radius])
+    if idx == 710:     
+        flag_except = 0
+        try:
+            # Get the coordinates of the points on the centerline
+            cut_point_3 = centerline_points[idx]
 
+            normal_3 = centerline_points[idx] - centerline_points[idx-1]
+
+            plane_origin_3 = cut_point_3
+
+            plane_polydata_2 = pv.Plane(center=plane_origin_3, direction=normal_3, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
+
+            # Get the Path3D object of the intersection
+            path3D = mesh.section(plane_origin=plane_origin_3, plane_normal=normal_3)
+
+            # Extract the points from the Path3D object
+            points = np.array([path3D.vertices[i] for entity in path3D.entities for i in entity.points])
+            
+            filtered_points_2 = filter_points_within_radius(points, cut_point_3, 3)
+
+            points_2d = [project_point_to_plane(p, cut_point_3, normal_3)[:2] for p in filtered_points]
+
+            area = compute_area(points_2d)
+            print(area)
+        except: 
+            flag_except = 1
+            
+        if flag_except:
+            data.append([idx, np.nan, radius])
+        else:
+            data.append([idx, area, radius])
 if False:
     # Write data to CSV file
     with open(title_csv, 'w', newline='') as file:
@@ -168,6 +200,7 @@ if True:
 
     # Create a PolyData object from the points
     polydata = pv.PolyData(filtered_points)
+    polydata2 = pv.PolyData(filtered_points_2)
 
 
     ####################################################
@@ -176,6 +209,7 @@ if True:
 
     # Add the intersection
     p.add_mesh(polydata, color="yellow")
+    p.add_mesh(polydata2, color="yellow")
 
     # Add original mesh
     p.add_mesh(mesh, color="green", opacity=0.3, show_edges=True)
@@ -187,6 +221,7 @@ if True:
 
     # Add first clipping plane
     p.add_mesh(plane_polydata_3, color="red", opacity=0.5)
+    p.add_mesh(plane_polydata_2, color="red", opacity=0.5)
 
     # Add second clipping plane
 
