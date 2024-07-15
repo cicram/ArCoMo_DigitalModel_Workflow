@@ -7,6 +7,8 @@ class point_cloud_visual_editing:
         self.point_cloud2 = None
         self.actor1 = None
         self.actor2 = None
+        self.actor3 = None
+        self.actor4 = None
         self.renderer = None
         self.render_window = None
         self.render_window_interactor = None
@@ -19,7 +21,10 @@ class point_cloud_visual_editing:
         self.radius_text_actor = None
         self.fused_point_cloud = None
         self.previous_points_state = 0
+        self.ct_points_state = 1
+        self.oct_points_state = 1
         self.pointSize = 3
+        
     # Data parsing functions
 
     def parse_lumen_point_cloud(self, file_path):
@@ -218,19 +223,45 @@ class point_cloud_visual_editing:
         self.update_switch_state()
         # Callback function for the Clear Selection button
 
+    def create_point_cloud_actors(self):
+        self.actor1 = self.create_point_cloud_actor(self.point_cloud1, [1, 0, 0])
+        self.actor2 = self.create_point_cloud_actor(self.point_cloud2, [0, 0, 1])
+        self.actor3 = self.create_point_cloud_actor(self.point_cloud3, [1, 1, 0])
+        self.actor4 = self.create_point_cloud_actor(self.point_cloud4, [0, 1, 1])
+        
+        self.actor1.GetProperty().SetPointSize(3)
+        self.actor2.GetProperty().SetPointSize(3)
+        self.actor3.GetProperty().SetPointSize(3)
+        self.actor4.GetProperty().SetPointSize(3)
+
+    def hide_ct_points(self, obj, event):
+        if self.ct_points_state == 1:
+            self.renderer.RemoveActor(self.actor2)
+            self.renderer.RemoveActor(self.actor4)
+        else:
+            self.renderer.AddActor(self.actor2)
+            self.renderer.AddActor(self.actor4)
+        self.ct_points_state = 1 - self.ct_points_state
+        self.render_window.Render()
+
+    def hide_oct_points(self, obj, event):
+        if self.oct_points_state == 1:
+            self.renderer.RemoveActor(self.actor1)
+            self.renderer.RemoveActor(self.actor3)
+        else:
+            self.renderer.AddActor(self.actor1)
+            self.renderer.AddActor(self.actor3)
+        self.oct_points_state = 1 - self.oct_points_state
+        self.render_window.Render()
+
     def previous_points_callback(self, obj, event):
         if self.previous_points_state == 1:
             self.renderer.RemoveActor(self.actor3)
             self.renderer.RemoveActor(self.actor4)
-            self.previous_points_state = 0
         else:
-            self.previous_points_state = 1
-            self.actor3 = self.create_point_cloud_actor(self.point_cloud3, [1, 1, 0])
-            self.actor4 = self.create_point_cloud_actor(self.point_cloud4, [0, 1, 1])
-            self.actor3.GetProperty().SetPointSize(3)
-            self.actor4.GetProperty().SetPointSize(3)
             self.renderer.AddActor(self.actor3)
             self.renderer.AddActor(self.actor4)
+        self.previous_points_state = 1 - self.previous_points_state
         self.render_window.Render()
 
     def slider_callback(self, obj, event):
@@ -290,6 +321,8 @@ class point_cloud_visual_editing:
         self.point_cloud3 = oct_points_previous
         self.point_cloud4 = ct_points_previous
         
+        self.create_point_cloud_actors()
+
         self.renderer = vtk.vtkRenderer()
         style = vtk.vtkInteractorStyleTrackballCamera()
         self.render_window = vtk.vtkRenderWindow()
@@ -315,7 +348,7 @@ class point_cloud_visual_editing:
         self.render_window.Render()
 
         # Show previous points button
-                # Position the new button in the low-left corner
+        # Position the new button in the low-left corner
         bds_new = [0] * 6
         sz_new = 50.0
         bds_new[0] = 20  # Adjust the X-coordinate 
@@ -357,6 +390,91 @@ class point_cloud_visual_editing:
         previous_points_button_widget.AddObserver("StateChangedEvent", self.previous_points_callback)
         previous_points_button_widget.On()
 
+        # Show oct points button
+        # Position the new button in the low-left corner
+        bds_new = [0] * 6
+        sz_new = 50.0
+        bds_new[0] = 20  # Adjust the X-coordinate 
+        bds_new[1] = bds_new[0] + sz_new
+        bds_new[2] = 670  # Adjust the Y-coordinate 
+        bds_new[3] = bds_new[2] + sz_new
+        bds_new[4] = bds_new[5] = 0.0
+
+        # Create a VTK button representation for the new button
+        oct_points_button_rep = vtk.vtkTexturedButtonRepresentation2D()
+        button_texture_blue = vtk.vtkImageData()
+        button_texture_red = vtk.vtkImageData()
+        self.CreateButtonBlue(button_texture_blue)
+        self.CreateButtonRed(button_texture_red)
+
+        oct_points_button_rep.SetNumberOfStates(2)
+        oct_points_button_rep.SetButtonTexture(0, button_texture_blue)
+        oct_points_button_rep.SetButtonTexture(1, button_texture_red)
+        # Place the new button widget
+
+        oct_points_button_text_actor = vtk.vtkTextActor()
+        oct_points_button_text_actor.GetTextProperty().SetFontSize(20)
+        oct_points_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
+        oct_points_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
+        oct_points_button_text_actor.SetPosition(bds_new[0], bds_new[3])
+        button_label = "Hide OCT points"  # Replace with your desired button label
+        oct_points_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
+        oct_points_button_text_actor.SetInput(button_label) 
+        self.renderer.AddActor2D(oct_points_button_text_actor)
+
+        oct_points_button_rep.SetPlaceFactor(1)
+        oct_points_button_rep.PlaceWidget(bds_new)
+
+        oct_points_button_widget = vtk.vtkButtonWidget()
+        oct_points_button_widget.SetInteractor(self.render_window_interactor)
+        oct_points_button_widget.SetRepresentation(oct_points_button_rep)
+
+        # Connect the callback function to the new button
+        oct_points_button_widget.AddObserver("StateChangedEvent", self.hide_oct_points)
+        oct_points_button_widget.On()
+
+        # Show ct points button
+        # Position the new button in the low-left corner
+        bds_new = [0] * 6
+        sz_new = 50.0
+        bds_new[0] = 20  # Adjust the X-coordinate 
+        bds_new[1] = bds_new[0] + sz_new
+        bds_new[2] = 570  # Adjust the Y-coordinate 
+        bds_new[3] = bds_new[2] + sz_new
+        bds_new[4] = bds_new[5] = 0.0
+
+        # Create a VTK button representation for the new button
+        ct_points_button_rep = vtk.vtkTexturedButtonRepresentation2D()
+        button_texture_blue = vtk.vtkImageData()
+        button_texture_red = vtk.vtkImageData()
+        self.CreateButtonBlue(button_texture_blue)
+        self.CreateButtonRed(button_texture_red)
+
+        ct_points_button_rep.SetNumberOfStates(2)
+        ct_points_button_rep.SetButtonTexture(0, button_texture_blue)
+        ct_points_button_rep.SetButtonTexture(1, button_texture_red)
+        # Place the new button widget
+
+        ct_points_button_text_actor = vtk.vtkTextActor()
+        ct_points_button_text_actor.GetTextProperty().SetFontSize(20)
+        ct_points_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
+        ct_points_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
+        ct_points_button_text_actor.SetPosition(bds_new[0], bds_new[3])
+        button_label = "Hide CT points"  # Replace with your desired button label
+        ct_points_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
+        ct_points_button_text_actor.SetInput(button_label) 
+        self.renderer.AddActor2D(ct_points_button_text_actor)
+
+        ct_points_button_rep.SetPlaceFactor(1)
+        ct_points_button_rep.PlaceWidget(bds_new)
+
+        ct_points_button_widget = vtk.vtkButtonWidget()
+        ct_points_button_widget.SetInteractor(self.render_window_interactor)
+        ct_points_button_widget.SetRepresentation(ct_points_button_rep)
+
+        # Connect the callback function to the new button
+        ct_points_button_widget.AddObserver("StateChangedEvent", self.hide_ct_points)
+        ct_points_button_widget.On()
 
         # Create a switch button
         # Position the new button in the low-left corner

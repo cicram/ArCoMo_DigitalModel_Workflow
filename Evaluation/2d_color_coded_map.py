@@ -88,9 +88,15 @@ def filter_points_within_radius(points, center_point, radius):
     return filtered_points
 
 def project_point_to_plane(point, origin, normal):
+    # Convert inputs to numpy arrays
     point = np.array(point)
     origin = np.array(origin)
     normal = np.array(normal)
+    
+    # Normalize the normal vector
+    normal = normal / np.linalg.norm(normal)
+    
+    # Compute the projection of the point onto the plane
     return point - np.dot((point - origin), normal) * normal
 
 def interpolate_points(arr, points):
@@ -103,31 +109,79 @@ def interpolate_points(arr, points):
 
     return interpolated_array
 
-def project_point_to_plane(point, origin, normal):
-    point = np.array(point)
-    origin = np.array(origin)
-    normal = np.array(normal)
-    return point - np.dot((point - origin), normal) * normal
-
 def compute_area(points):
     # Fit a spline to the points
     tck, u = splprep(np.array(points).T, s=0, per=True)
 
+    # Fit a spline to the points
+    tck, u = splprep(np.array(points).T, s=0, per=True)
+    
     # Evaluate the spline at many points to form a polygon
     u_new = np.linspace(u.min(), u.max(), 1000)
     x_spline, y_spline = splev(u_new, tck, der=0)
-    # x_plt = [point[0] for point in points]
-    # y_plt = [point[1] for point in points]
-    # plt.plot(x_spline, y_spline)
-    # plt.plot(x_plt, y_plt, "x")
-    # plt.show()
+    
     # Create a Polygon object from the spline points
     polygon = Polygon(np.column_stack((x_spline, y_spline)))
-
+    
     # Compute the area within the polygon using Shapely
     area_within_circle = polygon.area
-
+    
+    # Plotting the points, spline, and polygon
+    x_points = [point[0] for point in points]
+    y_points = [point[1] for point in points]
+    
+    if False:
+        plt.figure(figsize=(8, 8))
+        plt.plot(x_spline, y_spline, label='Fitted Spline', color='blue')
+        plt.plot(x_points, y_points, 'x', label='Original Points', color='red')
+        plt.fill(x_spline, y_spline, alpha=0.3, color='blue')
+        
+        # Annotate the area in the center
+        center_x, center_y = polygon.centroid.x, polygon.centroid.y
+        plt.text(center_x, center_y, f'Area: {area_within_circle:.2f} mm²', fontsize=12, ha='center')
+        
+        plt.xlabel('X (mm)')
+        plt.ylabel('Y (mm)')
+        plt.legend()
+        plt.title('Spline Fit and Enclosed Area')
+        plt.axis('equal')
+        plt.grid(True)
+        plt.show()
+    
     return area_within_circle
+
+def convert_to_2d(points_3d, origin, normal):
+    if False:
+        fig = plt.figure(figsize=(14, 7))
+        ax1 = fig.add_subplot(121, projection='3d')
+        ax1.scatter(points_3d[:, 0], points_3d[:, 1], points_3d[:, 2], color='blue', label='Original 3D Points')
+        plt.show()
+    # Find two vectors in the plane
+    normal = normal / np.linalg.norm(normal)
+    # Vector in the plane (not parallel to normal)
+    v1 = np.array([1, 0, 0]) if normal[0] == 0 else np.array([0, 1, 0])
+    # Basis vector u in the plane
+    u = np.cross(normal, v1)
+    u /= np.linalg.norm(u)
+    # Basis vector v in the plane
+    v = np.cross(normal, u)
+    
+    # Project each 3D point to 2D in the plane's coordinate system
+    points_2d = []
+    for point in points_3d:
+        point_proj = project_point_to_plane(point, origin, normal)
+        # Calculate 2D coordinates in the plane's basis
+        d = point_proj - origin
+        point_2d = [np.dot(d, u), np.dot(d, v)]
+        points_2d.append(point_2d)
+    
+    # Plotting the points, spline, and polygon
+    x_points = [point[0] for point in points_2d]
+    y_points = [point[1] for point in points_2d]
+    #plt.plot(x_points, y_points, 'x', label='Original Points', color='red')
+    #plt.show()
+
+    return points_2d
 
 # List of .ply file paths
 
@@ -201,6 +255,9 @@ mesh_points = np.vstack((x, y, z)).T
 kd_tree = KDTree(mesh_points)
 
 radius = 2
+data = []
+data.append(["Centerline IDX", "Area", "Filter radius"])
+
 
 end_idx = 950
 start_idx = 620
@@ -213,6 +270,7 @@ filtered_points_all = []
 # Loop over each centerline point to extract and plot the 2D points
 for idx, val in enumerate(centerline_points):
     if idx >= start_idx and idx <= end_idx:
+        flag_except = 0
         try:
             # Get the coordinates of the points on the centerline
             cut_point = centerline_points[idx]
@@ -235,12 +293,15 @@ for idx, val in enumerate(centerline_points):
                 plane_polydata_end = pv.Plane(center=cut_point, direction=normal, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
                 filtered_points_end = filtered_points
 
-            points_2d = [project_point_to_plane(p, cut_point, normal)[:2] for p in filtered_points]
             x_plt = [point[0] for point in filtered_points]
             y_plt = [point[1] for point in filtered_points]
             
+            points_2d = convert_to_2d(filtered_points, cut_point, normal)
+
             area = compute_area(points_2d)
+
             print(area)
+
             if area > are_threshold:
                 area_all.append(area)
                 filtered_points_all.append(filtered_points)
@@ -255,7 +316,12 @@ for idx, val in enumerate(centerline_points):
                 colors = cmap(filtered_points_quality_interpolated)
                 colors_all.append(colors)
         except: 
-            pass
+            flag_except = 1
+            
+        if flag_except:
+            data.append([idx, np.nan, radius])
+        else:
+            data.append([idx, area, radius])
 
 # Normalize area
 area_all = np.array(area_all)

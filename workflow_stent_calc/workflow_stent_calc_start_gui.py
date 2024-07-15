@@ -183,7 +183,13 @@ class OCTAnalyzerGUI:
         else:
             # Display an error message or handle the case where the file does not exist
             return
-        
+    
+    def remove_trailing_zeros(self, number):
+        number_str = str(int(str(number).rstrip('0')))
+        if number == 10:
+            number_str = "10"
+        return number_str
+
     def run_analysis(self):
         # Retrieve values from entry widgets and checkboxes
         self.oct_registration_frame = self.entry_oct_registration_frame.get()
@@ -219,8 +225,8 @@ class OCTAnalyzerGUI:
         self.path_fused_point_cloud = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_fused_point_cloud.xyz'
         self.path_point_cloud_oct = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_oct.xyz'
         self.path_point_cloud_ct = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_ct.xyz'
-        self.path_point_cloud_oct_gt = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output_ground_truth/ArCoMo' + str(self.arcomo_number) + '_point_cloud_oct.xyz'
-        self.path_point_cloud_ct_gt = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output_ground_truth/ArCoMo' + str(self.arcomo_number) + '_point_cloud_ct.xyz'
+        self.path_point_cloud_oct_gt = 'ArCoMo_Data/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '/output_ground_truth/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '_point_cloud_oct.xyz'
+        self.path_point_cloud_ct_gt = 'ArCoMo_Data/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '/output_ground_truth/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '_point_cloud_ct.xyz'
 
         # Ouput oct registration image
         self.path_oct_registration_frame_marked = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/output/ArCoMo{self.arcomo_number}_registration_image_marked_oct.png"

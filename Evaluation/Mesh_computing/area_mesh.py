@@ -140,7 +140,7 @@ for idx, val in enumerate(centerline_points):
             
             filtered_points = filter_points_within_radius(points, cut_point_3, 3)
 
-            points_2d = [project_point_to_plane(p, cut_point_3, normal_3)[:2] for p in filtered_points]
+            points_2d = convert_to_2d(filtered_points, cut_point_3, normal_3)
 
             area = compute_area(points_2d)
             print(area)
