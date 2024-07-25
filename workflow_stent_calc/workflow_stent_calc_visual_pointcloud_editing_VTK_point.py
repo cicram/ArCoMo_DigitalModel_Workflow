@@ -5,6 +5,8 @@ class point_cloud_visual_editing:
     def __init__(self):
         self.point_cloud1 = None
         self.point_cloud2 = None
+        self.point_cloud1_previous = None
+        self.point_cloud2_previous = None
         self.actor1 = None
         self.actor2 = None
         self.actor3 = None
@@ -227,12 +229,12 @@ class point_cloud_visual_editing:
         self.actor1 = self.create_point_cloud_actor(self.point_cloud1, [1, 0, 0])
         self.actor2 = self.create_point_cloud_actor(self.point_cloud2, [0, 0, 1])
         self.actor3 = self.create_point_cloud_actor(self.point_cloud3, [1, 1, 0])
-        self.actor4 = self.create_point_cloud_actor(self.point_cloud4, [0, 1, 1])
+        self.actor4 = self.create_point_cloud_actor(self.point_cloud4, [0, 0, 0])
         
         self.actor1.GetProperty().SetPointSize(3)
         self.actor2.GetProperty().SetPointSize(3)
         self.actor3.GetProperty().SetPointSize(3)
-        self.actor4.GetProperty().SetPointSize(3)
+        self.actor4.GetProperty().SetPointSize(5)
 
     def hide_ct_points(self, obj, event):
         if self.ct_points_state == 1:
@@ -277,11 +279,11 @@ class point_cloud_visual_editing:
 
     def remove_selected_points(self):
         if self.switch_state == 0:
-            print(len(self.point_cloud2))
+            self.point_cloud2_previous = self.point_cloud2
             self.point_cloud2 = np.delete(self.point_cloud2, self.selected_points_blue, axis=0)
-            print(len(self.point_cloud2))
             self.update_actors()
         else:
+            self.point_cloud1_previous = self.point_cloud1
             self.point_cloud1 = np.delete(self.point_cloud1, self.selected_points_red, axis=0)
             self.update_actors()
 
@@ -292,6 +294,17 @@ class point_cloud_visual_editing:
         self.selected_points_blue = []
         self.selected_points_red = []
         self.highlight_selected_points()
+
+    def undo_points_removal(self, obj, event):
+        if self.switch_state == 0:
+            self.point_cloud2 = self.point_cloud2_previous
+            self.update_actors()
+        else:
+            self.point_cloud1 = self.point_cloud1_previous
+            self.update_actors()
+
+        self.selected_points_blue = []
+        self.selected_points_red = []
 
     # Function to fuse two point clouds
     def fuse_point_clouds(self):
@@ -594,9 +607,59 @@ class point_cloud_visual_editing:
         remove_button.PlaceWidget(bds)
         remove_button_widget.On()
 
-        
+        # Undo removal button #
+
+        undo_button = vtk.vtkTexturedButtonRepresentation2D()
+        undo_button.SetNumberOfStates(1)
+        button_texture_1 = vtk.vtkImageData()
+
+        self.CreateButtonOff(button_texture_1)
+
+        undo_button.SetButtonTexture(0, button_texture_1)
+
+        undo_button_widget = vtk.vtkButtonWidget()
+        undo_button_widget.SetInteractor(self.render_window_interactor)
+        undo_button_widget.SetRepresentation(undo_button)
+        undo_button_widget.AddObserver("StateChangedEvent", self.undo_points_removal)
+
+        self.render_window.Render()
+
+
+        upperRight = vtk.vtkCoordinate()
+        upperRight.SetCoordinateSystemToNormalizedDisplay()
+        upperRight.SetValue(1.0, 1.0)
+
+        bds_new = [0] * 6
+        sz_new = 50.0
+        bds_new[0] = 20  # Adjust the X-coordinate 
+        bds_new[1] = bds_new[0] + sz_new
+        bds_new[2] = 670  # Adjust the Y-coordinate 
+        bds_new[3] = bds_new[2] + sz_new
+        bds_new[4] = bds_new[5] = 0.0
+
+        bds = [0] * 6
+        sz = 50.0
+        bds[0] = upperRight.GetComputedDisplayValue(self.renderer)[0] - sz - 20
+        bds[1] = bds[0] + sz
+        bds[2] = 470 
+        bds[3] = bds[2] + sz
+        bds[4] = bds[5] = 0.0
+
+        undo_button_text_actor = vtk.vtkTextActor()
+        undo_button_text_actor.GetTextProperty().SetFontSize(20)
+        undo_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
+        undo_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
+        undo_button_text_actor.SetPosition(bds[0]-100, bds[3]-75)
+        button_label = "Remove Button"  # Replace with your desired button label
+        undo_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
+        undo_button_text_actor.SetInput(button_label) 
+        self.renderer.AddActor2D(undo_button_text_actor)
+
+        undo_button.SetPlaceFactor(1)
+        undo_button.PlaceWidget(bds)
+        undo_button_widget.On()
+
         # Clear selection button
-        # Create a VTK button widget for clearing the selection
         clear_button_rep = vtk.vtkTexturedButtonRepresentation2D()
         button_texture_off_clear = vtk.vtkImageData()
         self.CreateButtonOff(button_texture_off_clear)

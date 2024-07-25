@@ -189,8 +189,8 @@ def convert_to_2d(points_3d, origin, normal):
 
 ###########################################################################################################
 # CHANGE NUMBER HERE AND FOLDER LOCATION
-ArCoMo_number = "300"
-ArCoMo_number_gt = "3"
+ArCoMo_number = "1400"
+ArCoMo_number_gt = "14"
 
 ply_file = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply'
 ply_file_gt = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/output_ground_truth/ArCoMo' + ArCoMo_number_gt + '_ground_truth_mesh.ply'
@@ -198,11 +198,12 @@ gt_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArC
 model_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas.csv'
 analysis_output_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_statisitcal_analysis.xlsx'
 linear_regression_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_linear_regression.xlsx'
+mesh_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + 'statistical_results_mesh_gemoetry.csv'
 centerline_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
 
 # SELECT OCT PART WITH INDEXES
-end_idx = 950
-start_idx = 620
+start_idx = 1 #Ar300: 620, Ar200: 150
+end_idx = 800 #Ar300: 950, Ar200: 410
 ###########################################################################################################
 
 ######################################################################################################################################
@@ -258,6 +259,28 @@ all_quality_filtered.append(quality_filtered)  # Add filtered quality data to th
 plt.show()  # Show all histogram and scatter plots
 
 
+# Calculate statistical measures
+min_val = np.min(quality_filtered)
+max_val = np.max(quality_filtered)
+median_val = np.median(quality_filtered)
+mean_val = np.mean(quality_filtered)
+std_dev = np.std(quality_filtered)
+
+
+# Prepare data to be written to CSV
+data = [
+    ["Measure", "Value"],
+    ["Min", f"{min_val:.2f}"],
+    ["Max", f"{max_val:.2f}"],
+    ["Median", f"{median_val:.2f}"],
+    ["Mean", f"{mean_val:.2f}"],
+    ["Std Dev", f"{std_dev:.2f}"]
+]
+
+# Save the description to a csv file
+with open(mesh_results_csv, mode="w", newline="") as file:
+    writer = csv.writer(file)
+    writer.writerows(data)
 
 ######################################################################################################################################
 ########################### 2D COLOR CODED SCATTER PLOT ##############################################################################
@@ -276,14 +299,12 @@ centerline_points = resample_center_line(centerline_points, 0.2)
 mesh_points = np.vstack((x, y, z)).T
 kd_tree = KDTree(mesh_points)
 
-radius = 2
+radius = 3
 data_model = []
 data_model.append(["Centerline IDX", "Area", "Filter radius"])
 data_gt = []
 data_gt.append(["Centerline IDX", "Area", "Filter radius"])
 
-end_idx = 950
-start_idx = 620
 plt_idx = 0
 interp_points = 20
 are_threshold = 0.2
@@ -394,7 +415,7 @@ for fil_point in filtered_points_all:
     polydata3 = pv.PolyData(fil_point)
     p.add_mesh(polydata3, color="yellow")
 
-# Add the intersection
+# Add the intersectione
 p.add_mesh(polydata, color="yellow")
 p.add_mesh(polydata2, color="yellow")
 
@@ -515,18 +536,34 @@ diff_area = np.abs(df_gt['Area']- df_model['Area'])
 area_gt = df_gt['Area']
 area_model = df_model['Area']
 
+# Bland-Altman plot
+mean_area = (df_gt['Area'] + df_model['Area']) / 2
+
+# Create the Bland-Altman plot
+plt.figure(figsize=(10, 6))
+plt.scatter(mean_area, diff_area, alpha=0.5)
+plt.axhline(np.mean(diff_area), color='red', linestyle='--')
+plt.axhline(np.mean(diff_area) + 1.96 * np.std(diff_area), color='blue', linestyle='--')
+plt.axhline(np.mean(diff_area) - 1.96 * np.std(diff_area), color='blue', linestyle='--')
+plt.title('Bland-Altman Plot')
+plt.xlabel('Mean of Ground Truth and Model Area')
+plt.ylabel('Absolute Difference between Ground Truth and Model Area')
+plt.grid(True)
+plt.show()
+
 # Statistical Analysis
 analysis_data = []
 
 mean_abs_error = np.mean(diff_area)
 median_abs_error = np.median(diff_area)
+mean_std_error = np.std(diff_area)
 max_abs_error = np.max(diff_area)
 mean_squared_error = np.mean((area_model - area_gt) ** 2)
 correlation_coefficient = np.corrcoef(area_model, area_gt)[0, 1]
-analysis_data.append(["Overlap", max_abs_error, mean_abs_error, median_abs_error, mean_squared_error, correlation_coefficient])
+analysis_data.append(["Overlap", max_abs_error, mean_abs_error, mean_std_error, median_abs_error, mean_squared_error, correlation_coefficient])
 
 # Create a DataFrame for the statistical analysis data
-analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Median Absolute Error','Mean Absolute Error', 'Mean Squared Error', 'Correlation Coefficient'])
+analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Mean Absolute Error', 'Mean STD Error', 'Median Absolute Error', 'Mean Squared Error', 'Correlation Coefficient'])
 
 # Save the DataFrame to an Excel file
 analysis_df.to_excel(analysis_output_csv, index=False)

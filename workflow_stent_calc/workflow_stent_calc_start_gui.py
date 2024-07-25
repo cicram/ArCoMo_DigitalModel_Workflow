@@ -82,6 +82,11 @@ class OCTAnalyzerGUI:
                                                                 text="Use existing registration point",
                                                                 variable=self.use_existing_registration_point_var)
 
+        self.no_rotation_var = tk.IntVar()
+        self.no_rotation = ttk.Checkbutton(self.master,
+                                            text="No rotation",
+                                            variable=self.no_rotation_var)
+        
         self.save_intermediate_steps_var = tk.IntVar()
         self.check_save_intermediate_steps = ttk.Checkbutton(self.master,
                                                              text="Save Intermediate Steps",
@@ -132,14 +137,15 @@ class OCTAnalyzerGUI:
         self.correction_method_dropdown.grid(row=5, column=1, padx=10, pady=5)
 
         self.use_existing_registration_point.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.no_rotation.grid(row=7, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.check_include_calc.grid(row=7, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        self.check_include_stent.grid(row=8, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_include_calc.grid(row=8, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_include_stent.grid(row=9, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.check_save_intermediate_steps.grid(row=9, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        self.check_display_intermediate_results.grid(row=10, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_save_intermediate_steps.grid(row=10, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_display_intermediate_results.grid(row=11, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.run_button.grid(row=11, column=0, columnspan=2, pady=10)
+        self.run_button.grid(row=12, column=0, columnspan=2, pady=10)
 
     def add_instruction_text(self, instruction_text):
         self.instructions_text_widget.configure(state=tk.NORMAL)
@@ -202,6 +208,7 @@ class OCTAnalyzerGUI:
         self.include_stent = self.include_stent_var.get()
         self.axial_twist_correction_method = self.correction_method_var.get()
         self.use_existing_registration_point = self.use_existing_registration_point_var.get()
+        self.no_rotation = self.no_rotation_var.get()
 
                 #ArCoMo number
         self.arcomo_number = int(self.arcomo_number)
@@ -307,6 +314,8 @@ class OCTAnalyzerGUI:
         if self.axial_twist_correction_method == OVERLAP:
             oct_rotation_angles = oct_extractor.get_rotation_matrix_overlap(oct_lumen_contours, self.z_distance, self.crop_top, self.crop_bottom, self.conversion_factor) 
         
+        if self.no_rotation == True:
+            oct_rotation_angles = np.zeros_like(oct_rotation_angles)
 
         import  matplotlib.pyplot as plt
         plt.plot(oct_rotation_angles, label="Axial rotation angles")  # Add a label to your plot for the legend
