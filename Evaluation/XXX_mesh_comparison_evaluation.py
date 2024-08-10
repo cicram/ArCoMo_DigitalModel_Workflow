@@ -189,21 +189,32 @@ def convert_to_2d(points_3d, origin, normal):
 
 ###########################################################################################################
 # CHANGE NUMBER HERE AND FOLDER LOCATION
-ArCoMo_number = "1400"
-ArCoMo_number_gt = "14"
+ArCoMo_number = "100"
+ArCoMo_number_gt = "1"
 
-ply_file = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply'
-ply_file_gt = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/output_ground_truth/ArCoMo' + ArCoMo_number_gt + '_ground_truth_mesh.ply'
-gt_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number_gt + '_areas.csv'
-model_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas.csv'
-analysis_output_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_statisitcal_analysis.xlsx'
-linear_regression_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_linear_regression.xlsx'
-mesh_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + 'statistical_results_mesh_gemoetry.csv'
-centerline_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
+# ply_file = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply'
+# ply_file_gt = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/output_ground_truth/ArCoMo' + ArCoMo_number_gt + '_ground_truth_mesh.ply'
+# gt_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number_gt + '_areas.csv'
+# model_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas.csv'
+# analysis_output_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_statisitcal_analysis.xlsx'
+# linear_regression_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_linear_regression.xlsx'
+# mesh_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + 'statistical_results_mesh_gemoetry.csv'
+# centerline_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
+
+ply_file = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo100/ArCoMo100_Colored_Qaulity_Overlap_Correction.ply'
+ply_file_gt = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Gound_truth_meshes/ArCoMo1_ground_truth.ply'
+gt_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number_gt + '_areas.csv'
+model_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas.csv'
+analysis_output_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_statisitcal_analysis.xlsx'
+linear_regression_results_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_linear_regression.xlsx'
+mesh_results_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + 'statistical_results_mesh_gemoetry.csv'
+centerline_file = 'C:/Users/siege/OneDrive - Universitaet Bern/Documents/ArCoMo_workflow/ArCoMo_DigitalModel_Workflow/ArCoMo_Data\ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
+
+folder_path = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo'  + ArCoMo_number + "/ArCoMo" + ArCoMo_number + "_"
 
 # SELECT OCT PART WITH INDEXES
-start_idx = 1 #Ar300: 620, Ar200: 150
-end_idx = 800 #Ar300: 950, Ar200: 410
+start_idx = 58 #Ar300: 620, Ar200: 150, Ar100: 58
+end_idx = 266 #Ar300: 950, Ar200: 410, Ar100: 266
 ###########################################################################################################
 
 ######################################################################################################################################
