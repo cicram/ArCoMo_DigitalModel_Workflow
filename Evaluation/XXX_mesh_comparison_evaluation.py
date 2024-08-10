@@ -542,10 +542,21 @@ plt.title('Centerline IDX vs Area')
 plt.grid(True)
 plt.show()
 
-
 diff_area = np.abs(df_gt['Area']- df_model['Area'])
 area_gt = df_gt['Area']
+area_gt_zscore = (area_gt-np.mean(area_gt))/np.std(area_gt)
 area_model = df_model['Area']
+area_model_zscore = (area_model-np.mean(area_model))/np.std(area_model)
+
+fig = plt.figure()
+plt.plot(df_gt['Centerline IDX'], area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground turth')
+plt.plot(df_model['Centerline IDX'], area_model_zscore, marker='o', linestyle='-', color=colors[1], label='Model')
+plt.legend()
+plt.xlabel('Centerline IDX')
+plt.ylabel('z-score (Lumen area)')
+plt.title('Centerline IDX vs z-score')
+plt.grid(True)
+plt.show()
 
 # Bland-Altman plot
 mean_area = (df_gt['Area'] + df_model['Area']) / 2
