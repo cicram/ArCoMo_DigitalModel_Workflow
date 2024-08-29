@@ -189,443 +189,482 @@ def convert_to_2d(points_3d, origin, normal):
 
 ###########################################################################################################
 # CHANGE NUMBER HERE AND FOLDER LOCATION
-ArCoMo_number = "100"
-ArCoMo_number_gt = "1"
-
-# ply_file = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply'
-# ply_file_gt = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/output_ground_truth/ArCoMo' + ArCoMo_number_gt + '_ground_truth_mesh.ply'
-# gt_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number_gt + '_areas.csv'
-# model_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas.csv'
-# analysis_output_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_statisitcal_analysis.xlsx'
-# linear_regression_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_linear_regression.xlsx'
-# mesh_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + 'statistical_results_mesh_gemoetry.csv'
-# centerline_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
-
-ply_file = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo100/ArCoMo100_Colored_Qaulity_Overlap_Correction.ply'
-ply_file_gt = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Gound_truth_meshes/ArCoMo1_ground_truth.ply'
-gt_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number_gt + '_areas.csv'
-model_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas.csv'
-analysis_output_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_statisitcal_analysis.xlsx'
-linear_regression_results_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_linear_regression.xlsx'
-mesh_results_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + 'statistical_results_mesh_gemoetry.csv'
-centerline_file = 'C:/Users/siege/OneDrive - Universitaet Bern/Documents/ArCoMo_workflow/ArCoMo_DigitalModel_Workflow/ArCoMo_Data\ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
-
-folder_path = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo'  + ArCoMo_number + "/ArCoMo" + ArCoMo_number + "_"
-
-# SELECT OCT PART WITH INDEXES
-start_idx = 58 #Ar300: 620, Ar200: 150, Ar100: 58
-end_idx = 266 #Ar300: 950, Ar200: 410, Ar100: 266
-###########################################################################################################
-
-######################################################################################################################################
-########################### 3D COLOR CODED SCATTER PLOT ##############################################################################
-######################################################################################################################################
-all_quality_filtered = []  # List to store filtered quality data from all files
-
-# Load the .ply file
-plydata = PlyData.read(ply_file)
-
-# Extract the vertex data
-vertex = plydata['vertex']
-x = vertex['x']
-y = vertex['y']
-z = vertex['z']
-quality = vertex['quality']
-quality_abs = abs(quality)
-
-# Normalize the quality values to range [0, 1]
-quality_normalized = (quality_abs - np.min(quality_abs)) / (np.max(quality_abs) - np.min(quality_abs))
-# Shift the scatterplot to origin (0,0,0)
-x_shifted = x - np.min(x)
-y_shifted = y - np.min(y)
-z_shifted = z - np.min(z)
-
-# Create a colormap ranging from green to red (reversed RdYlGn)
-cmap = cm.get_cmap('RdYlGn_r')
-
-# Create a 3D plot
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-sc = ax.scatter(x_shifted, y_shifted, z_shifted, c=cmap(quality_normalized))
-
-# Add a colorbar
-sm = ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=np.min(quality_abs), vmax=np.max(quality_abs)))
-sm.set_array([])
-cbar_ax = fig.add_axes([0.85, 0.15, 0.03, 0.7])
-fig.colorbar(sm, cax=cbar_ax, label='Absolute vertex distance difference [mm]')
-
-# Set the labels for x, y, and z axes
-ax.set_xlabel('X [mm]')
-ax.set_ylabel('Y [mm]')
-ax.set_zlabel('Z [mm]')
-
-# Set the title for the plot
-ax.set_title('Vertex distances differences')
-
-# Filter out quality values below 0.05
-abs_quality = abs(quality)
-quality_filtered = abs_quality[abs_quality >= 0.05]
-all_quality_filtered.append(quality_filtered)  # Add filtered quality data to the list
-
-plt.show()  # Show all histogram and scatter plots
-
-
-# Calculate statistical measures
-min_val = np.min(quality_filtered)
-max_val = np.max(quality_filtered)
-median_val = np.median(quality_filtered)
-mean_val = np.mean(quality_filtered)
-std_dev = np.std(quality_filtered)
-
-
-# Prepare data to be written to CSV
-data = [
-    ["Measure", "Value"],
-    ["Min", f"{min_val:.2f}"],
-    ["Max", f"{max_val:.2f}"],
-    ["Median", f"{median_val:.2f}"],
-    ["Mean", f"{mean_val:.2f}"],
-    ["Std Dev", f"{std_dev:.2f}"]
-]
-
-# Save the description to a csv file
-with open(mesh_results_csv, mode="w", newline="") as file:
-    writer = csv.writer(file)
-    writer.writerows(data)
-
-######################################################################################################################################
-########################### 2D COLOR CODED SCATTER PLOT ##############################################################################
-######################################################################################################################################
-
-######### MODEL #########################
-
-mesh = trimesh.load_mesh(ply_file)
-
-# Load centerline
-centerline_points = parse_point_cloud_centerline(centerline_file)
-
-centerline_points = resample_center_line(centerline_points, 0.2)
-
-# Create a KDTree for efficient nearest neighbor search
-mesh_points = np.vstack((x, y, z)).T
-kd_tree = KDTree(mesh_points)
-
-radius = 3
-data_model = []
-data_model.append(["Centerline IDX", "Area", "Filter radius"])
-data_gt = []
-data_gt.append(["Centerline IDX", "Area", "Filter radius"])
-
-plt_idx = 0
-interp_points = 20
-are_threshold = 0.2
-
-area_all = []
-colors_all = []
-filtered_points_all = []
-# Loop over each centerline point to extract and plot the 2D points
-for idx, val in enumerate(centerline_points):
-    if idx >= start_idx and idx <= end_idx:
-        flag_except = 0
-        try:
-            # Get the coordinates of the points on the centerline
-            cut_point = centerline_points[idx]
-            
-            normal = centerline_points[idx] - centerline_points[idx-1]
-            
-            # Get the Path3D object of the intersection
-            path3D = mesh.section(plane_origin=cut_point, plane_normal=normal)
-
-            # Extract the points from the Path3D object
-            points = np.array([path3D.vertices[i] for entity in path3D.entities for i in entity.points])
-            
-            # Filter points within the radius
-            filtered_points = filter_points_within_radius(points, cut_point, radius)
-
-            if idx == start_idx:
-                plane_polydata_start = pv.Plane(center=cut_point, direction=normal, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
-                filtered_points_start = filtered_points
-            if idx == end_idx:
-                plane_polydata_end = pv.Plane(center=cut_point, direction=normal, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
-                filtered_points_end = filtered_points
-
-            x_plt = [point[0] for point in filtered_points]
-            y_plt = [point[1] for point in filtered_points]
-            
-            points_2d = convert_to_2d(filtered_points, cut_point, normal)
-
-            area = compute_area(points_2d)
-
-            print(area)
-
-            if area > are_threshold:
-                area_all.append(area)
-                filtered_points_all.append(filtered_points)
-            
-                # Find the closest mesh point to each filtered point to get the quality value
-                distances, indices = kd_tree.query(filtered_points)
-
-                filtered_points_quality = quality_normalized[indices]
-
-                filtered_points_quality_interpolated = interpolate_points(filtered_points_quality, interp_points)
-
-                colors = cmap(filtered_points_quality_interpolated)
-                colors_all.append(colors)
-        except: 
-            flag_except = 1
-            
-        if flag_except:
-            data_model.append([idx, np.nan, radius])
-        else:
-            data_model.append([idx, area, radius])
-
-# Normalize area
-area_all = np.array(area_all)
-area_all_normalized = (area_all - np.min(area_all)) / (np.max(area_all) - np.min(area_all))
-# Create a figure for the 2D plot
-fig, ax = plt.subplots()
-# Plot each square
-for idx, area in enumerate(area_all_normalized):
-    colors = colors_all[idx]
-    for i, color in enumerate(colors):
-        #square = plt.Rectangle((i*area-interp_points/2*area, plt_idx), area, 1, color=color) #use this if you want to include the are into the 2d plot
-        square = plt.Rectangle((i-interp_points/2, plt_idx), 1, 1, color=color)
-
-        ax.add_patch(square)
-    plt_idx = plt_idx + 1
-
-# Set the limits of the plot
-ax.set_xlim(-interp_points/2, interp_points/2)
-ax.set_ylim(0, plt_idx)
-
-# Remove the axes for a cleaner look
-ax.axis('off')
-# Add a colorbar to the 2D plot
-sm = ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=np.min(quality_abs), vmax=np.max(quality_abs)))
-sm.set_array([])
-cbar = plt.colorbar(sm, ax=ax, label='Absolute vertex distance difference [mm]')
-
-# Set labels and title for the 2D plot
-ax.set_xlabel('Index')
-ax.set_ylabel('Centerline Path Index')
-ax.set_title('2D Projection of Vertex Distance Differences (Indexed)')
-
-# Show the 2D plot
-plt.show()
-
-
-# Create a PolyData object from the points
-polydata2 = pv.PolyData(filtered_points_end)
-polydata = pv.PolyData(filtered_points_start)
-
-####################################################
-# Plot the original mesh, centerline, and both clipping planes
-p = pv.Plotter()
-
-for fil_point in filtered_points_all:
-    polydata3 = pv.PolyData(fil_point)
-    p.add_mesh(polydata3, color="yellow")
-
-# Add the intersectione
-p.add_mesh(polydata, color="yellow")
-p.add_mesh(polydata2, color="yellow")
-
-# Add original mesh
-p.add_mesh(mesh, color="green", opacity=0.3, show_edges=True)
-
-# Add clipped mesh
-
-# Add first clipping plane
-p.add_mesh(plane_polydata_start, color="red", opacity=0.5)
-p.add_mesh(plane_polydata_end, color="blue", opacity=0.5)
-
-# Add second clipping plane
-
-p.show()
-
-######### GROUND TRUTH #########################
-mesh = trimesh.load_mesh(ply_file_gt)
-
-# Load centerline
-centerline_points = parse_point_cloud_centerline(centerline_file)
-
-centerline_points = resample_center_line(centerline_points, 0.2)
-
-# Create a KDTree for efficient nearest neighbor search
-mesh_points = np.vstack((x, y, z)).T
-kd_tree = KDTree(mesh_points)
-area_all = []
-colors_all = []
-filtered_points_all = []
-for idx, val in enumerate(centerline_points):
-    if idx >= start_idx and idx <= end_idx:
-        flag_except = 0
-        try:
-            # Get the coordinates of the points on the centerline
-            cut_point = centerline_points[idx]
-            
-            normal = centerline_points[idx] - centerline_points[idx-1]
-            
-            # Get the Path3D object of the intersection
-            path3D = mesh.section(plane_origin=cut_point, plane_normal=normal)
-
-            # Extract the points from the Path3D object
-            points = np.array([path3D.vertices[i] for entity in path3D.entities for i in entity.points])
-            
-            # Filter points within the radius
-            filtered_points = filter_points_within_radius(points, cut_point, radius)
-
-            if idx == start_idx:
-                plane_polydata_start = pv.Plane(center=cut_point, direction=normal, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
-                filtered_points_start = filtered_points
-            if idx == end_idx:
-                plane_polydata_end = pv.Plane(center=cut_point, direction=normal, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
-                filtered_points_end = filtered_points
-
-            x_plt = [point[0] for point in filtered_points]
-            y_plt = [point[1] for point in filtered_points]
-            
-            points_2d = convert_to_2d(filtered_points, cut_point, normal)
-
-            area = compute_area(points_2d)
-
-            print(area)
-
-            if area > are_threshold:
-                area_all.append(area)
-                filtered_points_all.append(filtered_points)
-            
-                # Find the closest mesh point to each filtered point to get the quality value
-                distances, indices = kd_tree.query(filtered_points)
-
-                filtered_points_quality = quality_normalized[indices]
-
-                filtered_points_quality_interpolated = interpolate_points(filtered_points_quality, interp_points)
-
-                colors = cmap(filtered_points_quality_interpolated)
-                colors_all.append(colors)
-        except: 
-            flag_except = 1
-            
-        if flag_except:
-            data_gt.append([idx, np.nan, radius])
-        else:
-            data_gt.append([idx, area, radius])
-
-# Save areas to csv file
-with open(model_csv, 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerows(data_model)
-with open(gt_csv, 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerows(data_gt)
-
-
-
-######################################################################################################################################
-########################### Area visualisation (linear regression) ######################################################################
-######################################################################################################################################
-
-
-df_gt = pd.read_csv(gt_csv)
-df_model = pd.read_csv(model_csv)
-
-colors = ['black', 'blue']
-
-fig = plt.figure()
-plt.plot(df_gt['Centerline IDX'], df_gt['Area'], marker='o', linestyle='-', color=colors[0], label='Ground turth')
-plt.plot(df_model['Centerline IDX'], df_model['Area'], marker='o', linestyle='-', color=colors[1], label='Model')
-plt.legend()
-plt.xlabel('Centerline IDX')
-plt.ylabel('Area')
-plt.title('Centerline IDX vs Area')
-plt.grid(True)
-plt.show()
-
-diff_area = np.abs(df_gt['Area']- df_model['Area'])
-area_gt = df_gt['Area']
-area_gt_zscore = (area_gt-np.mean(area_gt))/np.std(area_gt)
-area_model = df_model['Area']
-area_model_zscore = (area_model-np.mean(area_model))/np.std(area_model)
-
-fig = plt.figure()
-plt.plot(df_gt['Centerline IDX'], area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground turth')
-plt.plot(df_model['Centerline IDX'], area_model_zscore, marker='o', linestyle='-', color=colors[1], label='Model')
-plt.legend()
-plt.xlabel('Centerline IDX')
-plt.ylabel('z-score (Lumen area)')
-plt.title('Centerline IDX vs z-score')
-plt.grid(True)
-plt.show()
-
-# Bland-Altman plot
-mean_area = (df_gt['Area'] + df_model['Area']) / 2
-
-# Create the Bland-Altman plot
-plt.figure(figsize=(10, 6))
-plt.scatter(mean_area, diff_area, alpha=0.5)
-plt.axhline(np.mean(diff_area), color='red', linestyle='--')
-plt.axhline(np.mean(diff_area) + 1.96 * np.std(diff_area), color='blue', linestyle='--')
-plt.axhline(np.mean(diff_area) - 1.96 * np.std(diff_area), color='blue', linestyle='--')
-plt.title('Bland-Altman Plot')
-plt.xlabel('Mean of Ground Truth and Model Area')
-plt.ylabel('Absolute Difference between Ground Truth and Model Area')
-plt.grid(True)
-plt.show()
-
-# Statistical Analysis
-analysis_data = []
-
-mean_abs_error = np.mean(diff_area)
-median_abs_error = np.median(diff_area)
-mean_std_error = np.std(diff_area)
-max_abs_error = np.max(diff_area)
-mean_squared_error = np.mean((area_model - area_gt) ** 2)
-correlation_coefficient = np.corrcoef(area_model, area_gt)[0, 1]
-analysis_data.append(["Overlap", max_abs_error, mean_abs_error, mean_std_error, median_abs_error, mean_squared_error, correlation_coefficient])
-
-# Create a DataFrame for the statistical analysis data
-analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Mean Absolute Error', 'Mean STD Error', 'Median Absolute Error', 'Mean Squared Error', 'Correlation Coefficient'])
-
-# Save the DataFrame to an Excel file
-analysis_df.to_excel(analysis_output_csv, index=False)
-
-# LINEAR REGRESSION
-slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_gt, area_model)
-
-# Calculate R-squared
-r_squared_1 = r_value_1 ** 2
-
-# Create a DataFrame for linear regression values
-data = {
-    'Slope': [slope_1],
-    'Intercept': [intercept_1],
-    'R-value': [r_value_1],
-    'P-value': [p_value_1],
-    'Standard Error': [std_err_1],
-    'R-value-squared': [r_squared_1]
-
-}
-
-df_linear_regression = pd.DataFrame(data, index=['Overlap'])
-
-# Save linear regression values to an Excel file
-df_linear_regression.to_excel(linear_regression_results_csv)
-
-# Plotting
-plt.figure(figsize=(10, 8))
-
-# Plotting data points and fitted lines with matching colors
-plt.plot(area_gt, area_model, 'o', color=colors[1], label='Image correlation')
-plt.plot(area_gt, slope_1 * area_gt + intercept_1, '--', color=colors[1], label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
-
-# Plotting the 45-degree line for reference
-min_val = min(min(area_gt), min(area_model))
-max_val = max(max(area_gt), max(area_model))
-plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Reference line')
-
-plt.xlabel('Ground Truth Area')
-plt.ylabel('Measured Area')
-plt.title('Measured Areas with Fitted Lines to Ground Truth')
-plt.legend()
-plt.show()
+ArCoMo_numbers = ["900", "1000", "1100", "1300", "1500"]
+ArCoMo_numbers_gt = ["9", "10", "11", "13", "15"]
+
+for itr in range(len(ArCoMo_numbers)):
+    ArCoMo_number = ArCoMo_numbers[itr]
+    ArCoMo_number_gt = ArCoMo_numbers_gt[itr]
+    # SELECT OCT PART WITH INDEXES
+    #start_idx = 300 #Ar900: 105 #Ar1500: 90 #Ar1300: 170 #Ar1100: 300 #Ar1000: 260 #Ar300: 620, Ar200: 150, Ar100: 58
+    #end_idx = 600 #Ar900: 405 #Ar1500: 390 #Ar1300: 480 #Ar1100: 600 #Ar1000: 560 #Ar300: 950, Ar200: 410, Ar100: 266
+
+
+    ply_file = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply'
+    ply_file_gt = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/output_ground_truth/ArCoMo' + ArCoMo_number_gt + '_ground_truth_mesh.ply'
+    gt_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number_gt + '_areas.csv'
+    model_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas.csv'
+    analysis_output_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_statisitcal_analysis.xlsx'
+    linear_regression_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_linear_regression.xlsx'
+    mesh_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + 'statistical_results_mesh_gemoetry.csv'
+    centerline_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
+    registration_start_idx_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number + '/output/ArCoMo' + ArCoMo_number + '_centerline_registration_points.txt'
+    start_end_idx_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_oct_frames_info.txt'
+
+
+    if False:
+        ply_file = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo100/ArCoMo100_Colored_Qaulity_Overlap_Correction.ply'
+        ply_file_gt = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Gound_truth_meshes/ArCoMo1_ground_truth.ply'
+        gt_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number_gt + '_areas.csv'
+        model_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas.csv'
+        analysis_output_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_statisitcal_analysis.xlsx'
+        linear_regression_results_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_linear_regression.xlsx'
+        mesh_results_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + 'statistical_results_mesh_gemoetry.csv'
+        centerline_file = 'C:/Users/siege/OneDrive - Universitaet Bern/Documents/ArCoMo_workflow/ArCoMo_DigitalModel_Workflow/ArCoMo_Data\ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
+
+        folder_path = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo'  + ArCoMo_number + "/ArCoMo" + ArCoMo_number + "_"
+
+    # Read in index values
+    main_branch_start_idx = None
+    oct_start = None
+    oct_end = None
+    oct_registration = None
+
+    # Read the file
+    with open(registration_start_idx_file, 'r') as file:
+        for line in file:
+            if line.startswith('Registration_main_branch_start_idx'):
+                # Extract the number after the colon
+                main_branch_start_idx = int(line.split(':')[1].strip())
+                break
+
+    # Read the file
+    with open(start_end_idx_file, 'r') as file:
+        for line in file:
+            if line.startswith('oct_start'):
+                oct_start = int(line.split(':')[1].strip())
+            elif line.startswith('oct_end'):
+                oct_end = int(line.split(':')[1].strip())
+            elif line.startswith('oct_registration'):
+                oct_registration = int(line.split(':')[1].strip())
+
+    start_idx = main_branch_start_idx - (oct_end - oct_registration)
+    end_idx = main_branch_start_idx + (oct_registration- oct_start)
+    # Print the extracted value
+    print("Start idx:", start_idx)
+    print("End idx:", end_idx)
+
+    ###########################################################################################################
+
+    ######################################################################################################################################
+    ########################### 3D COLOR CODED SCATTER PLOT ##############################################################################
+    ######################################################################################################################################
+    all_quality_filtered = []  # List to store filtered quality data from all files
+
+    # Load the .ply file
+    plydata = PlyData.read(ply_file)
+
+    # Extract the vertex data
+    vertex = plydata['vertex']
+    x = vertex['x']
+    y = vertex['y']
+    z = vertex['z']
+    quality = vertex['quality']
+    quality_abs = abs(quality)
+
+    # Normalize the quality values to range [0, 1]
+    quality_normalized = (quality_abs - np.min(quality_abs)) / (np.max(quality_abs) - np.min(quality_abs))
+    # Shift the scatterplot to origin (0,0,0)
+    x_shifted = x - np.min(x)
+    y_shifted = y - np.min(y)
+    z_shifted = z - np.min(z)
+
+    # Create a colormap ranging from green to red (reversed RdYlGn)
+    cmap = cm.get_cmap('RdYlGn_r')
+
+    # Create a 3D plot
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    sc = ax.scatter(x_shifted, y_shifted, z_shifted, c=cmap(quality_normalized))
+
+    # Add a colorbar
+    sm = ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=np.min(quality_abs), vmax=np.max(quality_abs)))
+    sm.set_array([])
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.03, 0.7])
+    fig.colorbar(sm, cax=cbar_ax, label='Absolute vertex distance difference [mm]')
+
+    # Set the labels for x, y, and z axes
+    ax.set_xlabel('X [mm]')
+    ax.set_ylabel('Y [mm]')
+    ax.set_zlabel('Z [mm]')
+
+    # Set the title for the plot
+    ax.set_title('Vertex distances differences')
+
+    # Filter out quality values below 0.05
+    abs_quality = abs(quality)
+    quality_filtered = abs_quality[abs_quality >= 0.05]
+    all_quality_filtered.append(quality_filtered)  # Add filtered quality data to the list
+
+    #plt.show()  # Show all histogram and scatter plots
+
+
+    # Calculate statistical measures
+    min_val = np.min(quality_filtered)
+    max_val = np.max(quality_filtered)
+    median_val = np.median(quality_filtered)
+    mean_val = np.mean(quality_filtered)
+    std_dev = np.std(quality_filtered)
+
+
+    # Prepare data to be written to CSV
+    data = [
+        ["Measure", "Value"],
+        ["Min", f"{min_val:.2f}"],
+        ["Max", f"{max_val:.2f}"],
+        ["Median", f"{median_val:.2f}"],
+        ["Mean", f"{mean_val:.2f}"],
+        ["Std Dev", f"{std_dev:.2f}"]
+    ]
+
+    # Save the description to a csv file
+    with open(mesh_results_csv, mode="w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerows(data)
+
+    ######################################################################################################################################
+    ########################### 2D COLOR CODED SCATTER PLOT ##############################################################################
+    ######################################################################################################################################
+
+    ######### MODEL #########################
+
+    mesh = trimesh.load_mesh(ply_file)
+
+    # Load centerline
+    centerline_points = parse_point_cloud_centerline(centerline_file)
+
+    centerline_points = resample_center_line(centerline_points, 0.2)
+
+    # Create a KDTree for efficient nearest neighbor search
+    mesh_points = np.vstack((x, y, z)).T
+    kd_tree = KDTree(mesh_points)
+
+    radius = 3
+    data_model = []
+    data_model.append(["Centerline IDX", "Area", "Filter radius"])
+    data_gt = []
+    data_gt.append(["Centerline IDX", "Area", "Filter radius"])
+
+    plt_idx = 0
+    interp_points = 20
+    are_threshold = 0.2
+
+    area_all = []
+    colors_all = []
+    filtered_points_all = []
+    # Loop over each centerline point to extract and plot the 2D points
+    for idx, val in enumerate(centerline_points):
+        if idx >= start_idx and idx <= end_idx:
+            flag_except = 0
+            try:
+                # Get the coordinates of the points on the centerline
+                cut_point = centerline_points[idx]
+                
+                normal = centerline_points[idx] - centerline_points[idx-1]
+                
+                # Get the Path3D object of the intersection
+                path3D = mesh.section(plane_origin=cut_point, plane_normal=normal)
+
+                # Extract the points from the Path3D object
+                points = np.array([path3D.vertices[i] for entity in path3D.entities for i in entity.points])
+                
+                # Filter points within the radius
+                filtered_points = filter_points_within_radius(points, cut_point, radius)
+
+                if idx == start_idx:
+                    plane_polydata_start = pv.Plane(center=cut_point, direction=normal, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
+                    filtered_points_start = filtered_points
+                if idx == end_idx:
+                    plane_polydata_end = pv.Plane(center=cut_point, direction=normal, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
+                    filtered_points_end = filtered_points
+
+                x_plt = [point[0] for point in filtered_points]
+                y_plt = [point[1] for point in filtered_points]
+                
+                points_2d = convert_to_2d(filtered_points, cut_point, normal)
+
+                area = compute_area(points_2d)
+
+                print(area)
+
+                if area > are_threshold:
+                    area_all.append(area)
+                    filtered_points_all.append(filtered_points)
+                
+                    # Find the closest mesh point to each filtered point to get the quality value
+                    distances, indices = kd_tree.query(filtered_points)
+
+                    filtered_points_quality = quality_normalized[indices]
+
+                    filtered_points_quality_interpolated = interpolate_points(filtered_points_quality, interp_points)
+
+                    colors = cmap(filtered_points_quality_interpolated)
+                    colors_all.append(colors)
+            except: 
+                flag_except = 1
+                
+            if flag_except:
+                data_model.append([idx, np.nan, radius])
+            else:
+                data_model.append([idx, area, radius])
+
+    # Normalize area
+    area_all = np.array(area_all)
+    area_all_normalized = (area_all - np.min(area_all)) / (np.max(area_all) - np.min(area_all))
+    # Create a figure for the 2D plot
+    fig, ax = plt.subplots()
+    # Plot each square
+    for idx, area in enumerate(area_all_normalized):
+        colors = colors_all[idx]
+        for i, color in enumerate(colors):
+            #square = plt.Rectangle((i*area-interp_points/2*area, plt_idx), area, 1, color=color) #use this if you want to include the are into the 2d plot
+            square = plt.Rectangle((i-interp_points/2, plt_idx), 1, 1, color=color)
+
+            ax.add_patch(square)
+        plt_idx = plt_idx + 1
+
+    # Set the limits of the plot
+    ax.set_xlim(-interp_points/2, interp_points/2)
+    ax.set_ylim(0, plt_idx)
+
+    # Remove the axes for a cleaner look
+    ax.axis('off')
+    # Add a colorbar to the 2D plot
+    sm = ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=np.min(quality_abs), vmax=np.max(quality_abs)))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, label='Absolute vertex distance difference [mm]')
+
+    # Set labels and title for the 2D plot
+    ax.set_xlabel('Index')
+    ax.set_ylabel('Centerline Path Index')
+    ax.set_title('2D Projection of Vertex Distance Differences (Indexed)')
+
+    # Show the 2D plot
+    #plt.show()
+
+
+    # Create a PolyData object from the points
+    polydata2 = pv.PolyData(filtered_points_end)
+    polydata = pv.PolyData(filtered_points_start)
+
+    ####################################################
+    # Plot the original mesh, centerline, and both clipping planes
+    p = pv.Plotter()
+
+    for fil_point in filtered_points_all:
+        polydata3 = pv.PolyData(fil_point)
+        p.add_mesh(polydata3, color="yellow")
+
+    # Add the intersectione
+    p.add_mesh(polydata, color="yellow")
+    p.add_mesh(polydata2, color="yellow")
+
+    # Add original mesh
+    p.add_mesh(mesh, color="green", opacity=0.3, show_edges=True)
+
+    # Add clipped mesh
+
+    # Add first clipping plane
+    p.add_mesh(plane_polydata_start, color="red", opacity=0.5)
+    p.add_mesh(plane_polydata_end, color="blue", opacity=0.5)
+
+    # Add second clipping plane
+
+    #p.show()
+
+    ######### GROUND TRUTH #########################
+    mesh = trimesh.load_mesh(ply_file_gt)
+
+    # Load centerline
+    centerline_points = parse_point_cloud_centerline(centerline_file)
+
+    centerline_points = resample_center_line(centerline_points, 0.2)
+
+    # Create a KDTree for efficient nearest neighbor search
+    mesh_points = np.vstack((x, y, z)).T
+    kd_tree = KDTree(mesh_points)
+    area_all = []
+    colors_all = []
+    filtered_points_all = []
+    for idx, val in enumerate(centerline_points):
+        if idx >= start_idx and idx <= end_idx:
+            flag_except = 0
+            try:
+                # Get the coordinates of the points on the centerline
+                cut_point = centerline_points[idx]
+                
+                normal = centerline_points[idx] - centerline_points[idx-1]
+                
+                # Get the Path3D object of the intersection
+                path3D = mesh.section(plane_origin=cut_point, plane_normal=normal)
+
+                # Extract the points from the Path3D object
+                points = np.array([path3D.vertices[i] for entity in path3D.entities for i in entity.points])
+                
+                # Filter points within the radius
+                filtered_points = filter_points_within_radius(points, cut_point, radius)
+
+                if idx == start_idx:
+                    plane_polydata_start = pv.Plane(center=cut_point, direction=normal, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
+                    filtered_points_start = filtered_points
+                if idx == end_idx:
+                    plane_polydata_end = pv.Plane(center=cut_point, direction=normal, i_size=20, j_size=20, i_resolution=100, j_resolution=100)
+                    filtered_points_end = filtered_points
+
+                x_plt = [point[0] for point in filtered_points]
+                y_plt = [point[1] for point in filtered_points]
+                
+                points_2d = convert_to_2d(filtered_points, cut_point, normal)
+
+                area = compute_area(points_2d)
+
+                print(area)
+
+                if area > are_threshold:
+                    area_all.append(area)
+                    filtered_points_all.append(filtered_points)
+                
+                    # Find the closest mesh point to each filtered point to get the quality value
+                    distances, indices = kd_tree.query(filtered_points)
+
+                    filtered_points_quality = quality_normalized[indices]
+
+                    filtered_points_quality_interpolated = interpolate_points(filtered_points_quality, interp_points)
+
+                    colors = cmap(filtered_points_quality_interpolated)
+                    colors_all.append(colors)
+            except: 
+                flag_except = 1
+                
+            if flag_except:
+                data_gt.append([idx, np.nan, radius])
+            else:
+                data_gt.append([idx, area, radius])
+
+    # Save areas to csv file
+    with open(model_csv, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(data_model)
+    with open(gt_csv, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(data_gt)
+
+
+
+    ######################################################################################################################################
+    ########################### Area visualisation (linear regression) ######################################################################
+    ######################################################################################################################################
+
+
+    df_gt = pd.read_csv(gt_csv)
+    df_model = pd.read_csv(model_csv)
+
+    colors = ['black', 'blue']
+
+    fig = plt.figure()
+    plt.plot(df_gt['Centerline IDX'], df_gt['Area'], marker='o', linestyle='-', color=colors[0], label='Ground truth')
+    plt.plot(df_model['Centerline IDX'], df_model['Area'], marker='o', linestyle='-', color=colors[1], label='Model')
+    plt.legend()
+    plt.xlabel('Centerline IDX')
+    plt.ylabel('Area')
+    plt.title('Centerline IDX vs Area')
+    plt.grid(True)
+    #plt.show()
+
+    diff_area = np.abs(df_gt['Area']- df_model['Area'])
+    area_gt = df_gt['Area']
+    area_gt_zscore = (area_gt-np.mean(area_gt))/np.std(area_gt)
+    area_model = df_model['Area']
+    area_model_zscore = (area_model-np.mean(area_model))/np.std(area_model)
+
+    fig = plt.figure()
+    plt.plot(df_gt['Centerline IDX'], area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
+    plt.plot(df_model['Centerline IDX'], area_model_zscore, marker='o', linestyle='-', color=colors[1], label='Model')
+    plt.legend()
+    plt.xlabel('Centerline IDX')
+    plt.ylabel('z-score (Lumen area)')
+    plt.title('Centerline IDX vs z-score')
+    plt.grid(True)
+    #plt.show()
+
+    # Bland-Altman plot
+    mean_area = (df_gt['Area'] + df_model['Area']) / 2
+
+    # Create the Bland-Altman plot
+    plt.figure(figsize=(10, 6))
+    plt.scatter(mean_area, diff_area, alpha=0.5)
+    plt.axhline(np.mean(diff_area), color='red', linestyle='--')
+    plt.axhline(np.mean(diff_area) + 1.96 * np.std(diff_area), color='blue', linestyle='--')
+    plt.axhline(np.mean(diff_area) - 1.96 * np.std(diff_area), color='blue', linestyle='--')
+    plt.title('Bland-Altman Plot')
+    plt.xlabel('Mean of Ground Truth and Model Area')
+    plt.ylabel('Absolute Difference between Ground Truth and Model Area')
+    plt.grid(True)
+    #plt.show()
+
+    # Statistical Analysis
+    analysis_data = []
+
+    mean_abs_error = np.mean(diff_area)
+    median_abs_error = np.median(diff_area)
+    mean_std_error = np.std(diff_area)
+    max_abs_error = np.max(diff_area)
+    mean_squared_error = np.mean((area_model - area_gt) ** 2)
+    correlation_coefficient = np.corrcoef(area_model, area_gt)[0, 1]
+    analysis_data.append(["Overlap", max_abs_error, mean_abs_error, mean_std_error, median_abs_error, mean_squared_error, correlation_coefficient])
+
+    # Create a DataFrame for the statistical analysis data
+    analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Mean Absolute Error', 'Mean STD Error', 'Median Absolute Error', 'Mean Squared Error', 'Correlation Coefficient'])
+
+    # Save the DataFrame to an Excel file
+    analysis_df.to_excel(analysis_output_csv, index=False)
+
+    # LINEAR REGRESSION
+    slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_gt, area_model)
+
+    # Calculate R-squared
+    r_squared_1 = r_value_1 ** 2
+
+    # Create a DataFrame for linear regression values
+    data = {
+        'Slope': [slope_1],
+        'Intercept': [intercept_1],
+        'R-value': [r_value_1],
+        'P-value': [p_value_1],
+        'Standard Error': [std_err_1],
+        'R-value-squared': [r_squared_1]
+
+    }
+
+    df_linear_regression = pd.DataFrame(data, index=['Overlap'])
+
+    # Save linear regression values to an Excel file
+    df_linear_regression.to_excel(linear_regression_results_csv)
+
+    # Plotting
+    plt.figure(figsize=(10, 8))
+
+    # Plotting data points and fitted lines with matching colors
+    plt.plot(area_gt, area_model, 'o', color=colors[1], label='Image correlation')
+    plt.plot(area_gt, slope_1 * area_gt + intercept_1, '--', color=colors[1], label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
+
+    # Plotting the 45-degree line for reference
+    min_val = min(min(area_gt), min(area_model))
+    max_val = max(max(area_gt), max(area_model))
+    plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Reference line')
+
+    plt.xlabel('Ground Truth Area')
+    plt.ylabel('Measured Area')
+    plt.title('Measured Areas with Fitted Lines to Ground Truth')
+    plt.legend()
+    #plt.show()
