@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.cm import ScalarMappable
+import os
 from plyfile import PlyData
 import pyvista as pv
 from scipy.spatial import KDTree
@@ -11,7 +12,16 @@ from scipy.interpolate import splprep, splev
 from shapely.geometry import Polygon
 import csv 
 import pandas as pd
-from scipy.stats import linregress
+from scipy.stats import linregress, spearmanr
+
+def create_folder(folder_path):
+    # Creates a folder if it doesn't exist.
+
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        print(f"Folder '{folder_path}' created successfully.")
+    else:
+        print(f"Folder '{folder_path}' already exists.")
 
 def parse_point_cloud_centerline(file_path):
     flag_header = False
@@ -189,8 +199,8 @@ def convert_to_2d(points_3d, origin, normal):
 
 ###########################################################################################################
 # CHANGE NUMBER HERE AND FOLDER LOCATION
-ArCoMo_number = "100"
-ArCoMo_number_gt = "1"
+ArCoMo_number = "1200"
+ArCoMo_number_gt = "12"
 
 # ply_file = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply'
 # ply_file_gt = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/output_ground_truth/ArCoMo' + ArCoMo_number_gt + '_ground_truth_mesh.ply'
@@ -201,8 +211,8 @@ ArCoMo_number_gt = "1"
 # mesh_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + 'statistical_results_mesh_gemoetry.csv'
 # centerline_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
 
-ply_file = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo100/ArCoMo100_Colored_Qaulity_Overlap_Correction.ply'
-ply_file_gt = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Gound_truth_meshes/ArCoMo1_ground_truth.ply'
+ply_file = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo1200/ArCoMo1200_Colored_Qaulity_Overlap_Correction.ply'
+ply_file_gt = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Gound_truth_meshes/ArCoMo12_ground_truth.ply'
 gt_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number_gt + '_areas.csv'
 model_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas.csv'
 analysis_output_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_areas_statisitcal_analysis.xlsx'
@@ -211,10 +221,15 @@ mesh_results_csv = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS
 centerline_file = 'C:/Users/siege/OneDrive - Universitaet Bern/Documents/ArCoMo_workflow/ArCoMo_DigitalModel_Workflow/ArCoMo_Data\ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
 
 folder_path = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo'  + ArCoMo_number + "/ArCoMo" + ArCoMo_number + "_"
+folder_path_img = 'C:/Users/siege/Universitaet Bern/Ilic, Marc Sascha (STUDENTS) - Dokumente/ArCoMo/Workflow_3D_reconstruction/Model_evaluation/ArCoMo'  + ArCoMo_number + '/plots' 
+
+create_folder(folder_path_img)
+
+folder_path_img = folder_path_img + "/ArCoMo" + ArCoMo_number + "_"
 
 # SELECT OCT PART WITH INDEXES
-start_idx = 58 #Ar300: 620, Ar200: 150, Ar100: 58
-end_idx = 266 #Ar300: 950, Ar200: 410, Ar100: 266
+start_idx = 126 #Ar100: 58,  Ar200: 150, Ar300: 620, Ar500: 75, Ar700: 155 Ar800: 38, Ar1200: 126,
+end_idx = 419 #Ar100: 266, Ar200: 410, Ar300: 950, Ar500: 365, Ar700: 410 Ar800: 278, Ar1200: 419,
 ###########################################################################################################
 
 ######################################################################################################################################
@@ -260,13 +275,15 @@ ax.set_ylabel('Y [mm]')
 ax.set_zlabel('Z [mm]')
 
 # Set the title for the plot
-ax.set_title('Vertex distances differences')
+# ax.set_title('Vertex distances differences')
 
 # Filter out quality values below 0.05
 abs_quality = abs(quality)
 quality_filtered = abs_quality[abs_quality >= 0.05]
 all_quality_filtered.append(quality_filtered)  # Add filtered quality data to the list
 
+plt.savefig(folder_path_img + 'vert_diff_3D.svg', format='svg')
+plt.savefig(folder_path_img + 'vert_diff_3D.png', format='png')
 plt.show()  # Show all histogram and scatter plots
 
 
@@ -411,7 +428,10 @@ ax.set_ylabel('Centerline Path Index')
 ax.set_title('2D Projection of Vertex Distance Differences (Indexed)')
 
 # Show the 2D plot
+plt.savefig(folder_path_img + 'vert_diff_2D.svg', format='svg')
+plt.savefig(folder_path_img + 'vert_diff_2D.png', format='png')
 plt.show()
+
 
 
 # Create a PolyData object from the points
@@ -540,13 +560,28 @@ plt.xlabel('Centerline IDX')
 plt.ylabel('Area')
 plt.title('Centerline IDX vs Area')
 plt.grid(True)
+
+plt.savefig(folder_path_img + 'area_diff.svg', format='svg')
 plt.show()
 
+ 
 diff_area = np.abs(df_gt['Area']- df_model['Area'])
 area_gt = df_gt['Area']
 area_gt_zscore = (area_gt-np.mean(area_gt))/np.std(area_gt)
+mla_gt = np.min(area_gt)
 area_model = df_model['Area']
 area_model_zscore = (area_model-np.mean(area_model))/np.std(area_model)
+mla_model = np.min(area_model)
+diff_zscore = np.abs(area_gt_zscore-area_model_zscore)
+
+spearman_c, spearman_p = spearmanr(area_model_zscore, area_gt_zscore)
+
+rel_mla_err = (np.abs(mla_model-mla_gt)/mla_gt)*100
+print(f"MLA GT: {mla_gt:.4f}")
+print(f"MLA Model: {mla_model:.4f}")
+print(f"MLA error: {rel_mla_err:.4f} %")
+
+
 
 fig = plt.figure()
 plt.plot(df_gt['Centerline IDX'], area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground turth')
@@ -556,6 +591,8 @@ plt.xlabel('Centerline IDX')
 plt.ylabel('z-score (Lumen area)')
 plt.title('Centerline IDX vs z-score')
 plt.grid(True)
+
+plt.savefig(folder_path_img + 'zscore_diff_3D.svg', format='svg')
 plt.show()
 
 # Bland-Altman plot
@@ -571,6 +608,8 @@ plt.title('Bland-Altman Plot')
 plt.xlabel('Mean of Ground Truth and Model Area')
 plt.ylabel('Absolute Difference between Ground Truth and Model Area')
 plt.grid(True)
+
+plt.savefig(folder_path_img + 'bland_alt.svg', format='svg')
 plt.show()
 
 # Statistical Analysis
@@ -582,16 +621,28 @@ mean_std_error = np.std(diff_area)
 max_abs_error = np.max(diff_area)
 mean_squared_error = np.mean((area_model - area_gt) ** 2)
 correlation_coefficient = np.corrcoef(area_model, area_gt)[0, 1]
-analysis_data.append(["Overlap", max_abs_error, mean_abs_error, mean_std_error, median_abs_error, mean_squared_error, correlation_coefficient])
+# spearman_c, spearman_p = spearmanr(area_model, area_gt)
+
+mean_zscore_error = np.mean(diff_zscore)
+std_zscore_error = np.std(diff_zscore)
+
+analysis_data.append(["Overlap", max_abs_error, mean_abs_error, mean_std_error,
+                       median_abs_error, mean_squared_error, spearman_c,
+                        mean_zscore_error, std_zscore_error])
+
+print(f"Spearman rank correlation coefficient: {spearman_c:.4f}")
+print(f"P-value: {spearman_p:.4f}")
 
 # Create a DataFrame for the statistical analysis data
-analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Mean Absolute Error', 'Mean STD Error', 'Median Absolute Error', 'Mean Squared Error', 'Correlation Coefficient'])
+analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Mean Absolute Error', 'Mean STD Error', 
+                                                   'Median Absolute Error', 'Mean Squared Error', 'Spearman Coefficient',
+                                                   'Mean z-score diff','Std z-score diff'])
 
 # Save the DataFrame to an Excel file
 analysis_df.to_excel(analysis_output_csv, index=False)
 
 # LINEAR REGRESSION
-slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_gt, area_model)
+slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_gt_zscore, area_model_zscore)
 
 # Calculate R-squared
 r_squared_1 = r_value_1 ** 2
@@ -628,4 +679,6 @@ plt.xlabel('Ground Truth Area')
 plt.ylabel('Measured Area')
 plt.title('Measured Areas with Fitted Lines to Ground Truth')
 plt.legend()
+
+plt.savefig(folder_path_img + 'lin_reg.svg', format='svg')
 plt.show()
