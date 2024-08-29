@@ -234,6 +234,9 @@ class OCTAnalyzerGUI:
         self.path_point_cloud_ct = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_ct.xyz'
         self.path_point_cloud_oct_gt = 'ArCoMo_Data/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '/output_ground_truth/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '_point_cloud_oct.xyz'
         self.path_point_cloud_ct_gt = 'ArCoMo_Data/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '/output_ground_truth/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '_point_cloud_ct.xyz'
+        if self.arcomo_number == 1000:
+            self.path_point_cloud_oct_gt = 'ArCoMo_Data/ArCoMo10/output_ground_truth/ArCoMo10_point_cloud_oct.xyz'
+            self.path_point_cloud_ct_gt = 'ArCoMo_Data/ArCoMo10/output_ground_truth/ArCoMo10_point_cloud_ct.xyz'
 
         # Ouput oct registration image
         self.path_oct_registration_frame_marked = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/output/ArCoMo{self.arcomo_number}_registration_image_marked_oct.png"
