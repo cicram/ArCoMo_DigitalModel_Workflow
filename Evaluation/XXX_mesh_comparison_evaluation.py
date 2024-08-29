@@ -189,8 +189,8 @@ def convert_to_2d(points_3d, origin, normal):
 
 ###########################################################################################################
 # CHANGE NUMBER HERE AND FOLDER LOCATION
-ArCoMo_number = "1400"
-ArCoMo_number_gt = "14"
+ArCoMo_number = "1200"
+ArCoMo_number_gt = "12"
 
 ply_file = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_Colored_Qaulity_Overlap_Correction.ply'
 ply_file_gt = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/output_ground_truth/ArCoMo' + ArCoMo_number_gt + '_ground_truth_mesh.ply'
@@ -202,8 +202,8 @@ mesh_results_csv = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/ArC
 centerline_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
 
 # SELECT OCT PART WITH INDEXES
-start_idx = 1 #Ar300: 620, Ar200: 150
-end_idx = 800 #Ar300: 950, Ar200: 410
+start_idx = 100 #Ar300: 620, Ar200: 150, Ar1200: 
+end_idx = 400 #Ar300: 950, Ar200: 410, Ar1200: 
 ###########################################################################################################
 
 ######################################################################################################################################

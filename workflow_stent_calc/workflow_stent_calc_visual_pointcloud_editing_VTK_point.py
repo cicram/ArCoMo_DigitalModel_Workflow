@@ -650,7 +650,7 @@ class point_cloud_visual_editing:
         undo_button_text_actor.GetTextProperty().SetColor(0.0, 0.0, 0.0)
         undo_button_text_actor.GetTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
         undo_button_text_actor.SetPosition(bds[0]-100, bds[3]-75)
-        button_label = "Remove Button"  # Replace with your desired button label
+        button_label = "Undo Button"  # Replace with your desired button label
         undo_button_text_actor.SetTextScaleModeToNone()  # Disable text scaling
         undo_button_text_actor.SetInput(button_label) 
         self.renderer.AddActor2D(undo_button_text_actor)

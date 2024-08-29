@@ -305,17 +305,19 @@ class OCTAnalyzerGUI:
                                                              self.smoothing_kernel_size, self.threshold_value, self.display_results, self.save_images_for_controll)
 
         # Get rotation correction matrix
-        if self.axial_twist_correction_method == IMAGE:
-            oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame) 
-
-        if self.axial_twist_correction_method == ICP:
-            oct_rotation_angles = oct_extractor.get_rotation_matrix_ICP(oct_lumen_contours, self.z_distance) 
-
-        if self.axial_twist_correction_method == OVERLAP:
-            oct_rotation_angles = oct_extractor.get_rotation_matrix_overlap(oct_lumen_contours, self.z_distance, self.crop_top, self.crop_bottom, self.conversion_factor) 
-        
         if self.no_rotation == True:
-            oct_rotation_angles = np.zeros_like(oct_rotation_angles)
+            oct_rotation_angles = np.zeros(self.OCT_end_frame - self.OCT_start_frame)
+        else:
+            if self.axial_twist_correction_method == IMAGE:
+                oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame) 
+
+            if self.axial_twist_correction_method == ICP:
+                oct_rotation_angles = oct_extractor.get_rotation_matrix_ICP(oct_lumen_contours, self.z_distance) 
+
+            if self.axial_twist_correction_method == OVERLAP:
+                oct_rotation_angles = oct_extractor.get_rotation_matrix_overlap(oct_lumen_contours, self.z_distance, self.crop_top, self.crop_bottom, self.conversion_factor) 
+        
+        
 
         import  matplotlib.pyplot as plt
         plt.plot(oct_rotation_angles, label="Axial rotation angles")  # Add a label to your plot for the legend
