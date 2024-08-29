@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.cm import ScalarMappable
+import os
 from plyfile import PlyData
 import pyvista as pv
 from scipy.spatial import KDTree
@@ -11,7 +12,16 @@ from scipy.interpolate import splprep, splev
 from shapely.geometry import Polygon
 import csv 
 import pandas as pd
-from scipy.stats import linregress
+from scipy.stats import linregress, spearmanr
+
+def create_folder(folder_path):
+    # Creates a folder if it doesn't exist.
+
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        print(f"Folder '{folder_path}' created successfully.")
+    else:
+        print(f"Folder '{folder_path}' already exists.")
 
 def parse_point_cloud_centerline(file_path):
     flag_header = False
@@ -210,6 +220,7 @@ for itr in range(len(ArCoMo_numbers)):
     centerline_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number_gt + '/ArCoMo' + ArCoMo_number_gt + '_centerline.txt'
     registration_start_idx_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number + '/output/ArCoMo' + ArCoMo_number + '_centerline_registration_points.txt'
     start_end_idx_file = 'C:/Users/JL/Code/ArCoMo_DigitalModel_Workflow/ArCoMo_Data/ArCoMo' + ArCoMo_number + '/ArCoMo' + ArCoMo_number + '_oct_frames_info.txt'
+    folder_path_img = 'C:/Users/JL/Model_evaluation/ArCoMo' + ArCoMo_number + '/plots' 
 
 
     if False:
@@ -255,8 +266,11 @@ for itr in range(len(ArCoMo_numbers)):
     print("End idx:", end_idx)
 
     ###########################################################################################################
+    create_folder(folder_path_img)
 
-    ######################################################################################################################################
+    folder_path_img = folder_path_img + "/ArCoMo" + ArCoMo_number + "_"
+
+        ######################################################################################################################################
     ########################### 3D COLOR CODED SCATTER PLOT ##############################################################################
     ######################################################################################################################################
     all_quality_filtered = []  # List to store filtered quality data from all files
@@ -299,13 +313,15 @@ for itr in range(len(ArCoMo_numbers)):
     ax.set_zlabel('Z [mm]')
 
     # Set the title for the plot
-    ax.set_title('Vertex distances differences')
+    # ax.set_title('Vertex distances differences')
 
     # Filter out quality values below 0.05
     abs_quality = abs(quality)
     quality_filtered = abs_quality[abs_quality >= 0.05]
     all_quality_filtered.append(quality_filtered)  # Add filtered quality data to the list
 
+    plt.savefig(folder_path_img + 'vert_diff_3D.svg', format='svg')
+    plt.savefig(folder_path_img + 'vert_diff_3D.png', format='png')
     #plt.show()  # Show all histogram and scatter plots
 
 
@@ -450,7 +466,10 @@ for itr in range(len(ArCoMo_numbers)):
     ax.set_title('2D Projection of Vertex Distance Differences (Indexed)')
 
     # Show the 2D plot
+    plt.savefig(folder_path_img + 'vert_diff_2D.svg', format='svg')
+    plt.savefig(folder_path_img + 'vert_diff_2D.png', format='png')
     #plt.show()
+
 
 
     # Create a PolyData object from the points
@@ -572,29 +591,46 @@ for itr in range(len(ArCoMo_numbers)):
     colors = ['black', 'blue']
 
     fig = plt.figure()
-    plt.plot(df_gt['Centerline IDX'], df_gt['Area'], marker='o', linestyle='-', color=colors[0], label='Ground truth')
+    plt.plot(df_gt['Centerline IDX'], df_gt['Area'], marker='o', linestyle='-', color=colors[0], label='Ground turth')
     plt.plot(df_model['Centerline IDX'], df_model['Area'], marker='o', linestyle='-', color=colors[1], label='Model')
     plt.legend()
     plt.xlabel('Centerline IDX')
     plt.ylabel('Area')
     plt.title('Centerline IDX vs Area')
     plt.grid(True)
+
+    plt.savefig(folder_path_img + 'area_diff.svg', format='svg')
     #plt.show()
 
+    
     diff_area = np.abs(df_gt['Area']- df_model['Area'])
     area_gt = df_gt['Area']
     area_gt_zscore = (area_gt-np.mean(area_gt))/np.std(area_gt)
+    mla_gt = np.min(area_gt)
     area_model = df_model['Area']
     area_model_zscore = (area_model-np.mean(area_model))/np.std(area_model)
+    mla_model = np.min(area_model)
+    diff_zscore = np.abs(area_gt_zscore-area_model_zscore)
+
+    spearman_c, spearman_p = spearmanr(area_model_zscore, area_gt_zscore)
+
+    rel_mla_err = (np.abs(mla_model-mla_gt)/mla_gt)*100
+    print(f"MLA GT: {mla_gt:.4f}")
+    print(f"MLA Model: {mla_model:.4f}")
+    print(f"MLA error: {rel_mla_err:.4f} %")
+
+
 
     fig = plt.figure()
-    plt.plot(df_gt['Centerline IDX'], area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
+    plt.plot(df_gt['Centerline IDX'], area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground turth')
     plt.plot(df_model['Centerline IDX'], area_model_zscore, marker='o', linestyle='-', color=colors[1], label='Model')
     plt.legend()
     plt.xlabel('Centerline IDX')
     plt.ylabel('z-score (Lumen area)')
     plt.title('Centerline IDX vs z-score')
     plt.grid(True)
+
+    plt.savefig(folder_path_img + 'zscore_diff_3D.svg', format='svg')
     #plt.show()
 
     # Bland-Altman plot
@@ -610,6 +646,8 @@ for itr in range(len(ArCoMo_numbers)):
     plt.xlabel('Mean of Ground Truth and Model Area')
     plt.ylabel('Absolute Difference between Ground Truth and Model Area')
     plt.grid(True)
+
+    plt.savefig(folder_path_img + 'bland_alt.svg', format='svg')
     #plt.show()
 
     # Statistical Analysis
@@ -621,16 +659,28 @@ for itr in range(len(ArCoMo_numbers)):
     max_abs_error = np.max(diff_area)
     mean_squared_error = np.mean((area_model - area_gt) ** 2)
     correlation_coefficient = np.corrcoef(area_model, area_gt)[0, 1]
-    analysis_data.append(["Overlap", max_abs_error, mean_abs_error, mean_std_error, median_abs_error, mean_squared_error, correlation_coefficient])
+    # spearman_c, spearman_p = spearmanr(area_model, area_gt)
+
+    mean_zscore_error = np.mean(diff_zscore)
+    std_zscore_error = np.std(diff_zscore)
+
+    analysis_data.append(["Overlap", max_abs_error, mean_abs_error, mean_std_error,
+                        median_abs_error, mean_squared_error, spearman_c,
+                            mean_zscore_error, std_zscore_error])
+
+    print(f"Spearman rank correlation coefficient: {spearman_c:.4f}")
+    print(f"P-value: {spearman_p:.4f}")
 
     # Create a DataFrame for the statistical analysis data
-    analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Mean Absolute Error', 'Mean STD Error', 'Median Absolute Error', 'Mean Squared Error', 'Correlation Coefficient'])
+    analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Mean Absolute Error', 'Mean STD Error', 
+                                                    'Median Absolute Error', 'Mean Squared Error', 'Spearman Coefficient',
+                                                    'Mean z-score diff','Std z-score diff'])
 
     # Save the DataFrame to an Excel file
     analysis_df.to_excel(analysis_output_csv, index=False)
 
     # LINEAR REGRESSION
-    slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_gt, area_model)
+    slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_gt_zscore, area_model_zscore)
 
     # Calculate R-squared
     r_squared_1 = r_value_1 ** 2
@@ -667,4 +717,6 @@ for itr in range(len(ArCoMo_numbers)):
     plt.ylabel('Measured Area')
     plt.title('Measured Areas with Fitted Lines to Ground Truth')
     plt.legend()
+
+    plt.savefig(folder_path_img + 'lin_reg.svg', format='svg')
     #plt.show()
