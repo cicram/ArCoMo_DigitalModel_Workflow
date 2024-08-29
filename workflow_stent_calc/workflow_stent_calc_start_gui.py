@@ -82,6 +82,11 @@ class OCTAnalyzerGUI:
                                                                 text="Use existing registration point",
                                                                 variable=self.use_existing_registration_point_var)
 
+        self.no_rotation_var = tk.IntVar()
+        self.no_rotation = ttk.Checkbutton(self.master,
+                                            text="No rotation",
+                                            variable=self.no_rotation_var)
+        
         self.save_intermediate_steps_var = tk.IntVar()
         self.check_save_intermediate_steps = ttk.Checkbutton(self.master,
                                                              text="Save Intermediate Steps",
@@ -132,14 +137,15 @@ class OCTAnalyzerGUI:
         self.correction_method_dropdown.grid(row=5, column=1, padx=10, pady=5)
 
         self.use_existing_registration_point.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.no_rotation.grid(row=7, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.check_include_calc.grid(row=7, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        self.check_include_stent.grid(row=8, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_include_calc.grid(row=8, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_include_stent.grid(row=9, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.check_save_intermediate_steps.grid(row=9, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        self.check_display_intermediate_results.grid(row=10, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_save_intermediate_steps.grid(row=10, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.check_display_intermediate_results.grid(row=11, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.run_button.grid(row=11, column=0, columnspan=2, pady=10)
+        self.run_button.grid(row=12, column=0, columnspan=2, pady=10)
 
     def add_instruction_text(self, instruction_text):
         self.instructions_text_widget.configure(state=tk.NORMAL)
@@ -183,7 +189,13 @@ class OCTAnalyzerGUI:
         else:
             # Display an error message or handle the case where the file does not exist
             return
-        
+    
+    def remove_trailing_zeros(self, number):
+        number_str = str(int(str(number).rstrip('0')))
+        if number == 10:
+            number_str = "10"
+        return number_str
+
     def run_analysis(self):
         # Retrieve values from entry widgets and checkboxes
         self.oct_registration_frame = self.entry_oct_registration_frame.get()
@@ -196,6 +208,7 @@ class OCTAnalyzerGUI:
         self.include_stent = self.include_stent_var.get()
         self.axial_twist_correction_method = self.correction_method_var.get()
         self.use_existing_registration_point = self.use_existing_registration_point_var.get()
+        self.no_rotation = self.no_rotation_var.get()
 
                 #ArCoMo number
         self.arcomo_number = int(self.arcomo_number)
@@ -219,8 +232,11 @@ class OCTAnalyzerGUI:
         self.path_fused_point_cloud = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_fused_point_cloud.xyz'
         self.path_point_cloud_oct = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_oct.xyz'
         self.path_point_cloud_ct = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_ct.xyz'
-        self.path_point_cloud_oct_gt = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output_ground_truth/ArCoMo' + str(self.arcomo_number) + '_point_cloud_oct.xyz'
-        self.path_point_cloud_ct_gt = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output_ground_truth/ArCoMo' + str(self.arcomo_number) + '_point_cloud_ct.xyz'
+        self.path_point_cloud_oct_gt = 'ArCoMo_Data/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '/output_ground_truth/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '_point_cloud_oct.xyz'
+        self.path_point_cloud_ct_gt = 'ArCoMo_Data/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '/output_ground_truth/ArCoMo' + self.remove_trailing_zeros(self.arcomo_number) + '_point_cloud_ct.xyz'
+        if self.arcomo_number == 1000:
+            self.path_point_cloud_oct_gt = 'ArCoMo_Data/ArCoMo10/output_ground_truth/ArCoMo10_point_cloud_oct.xyz'
+            self.path_point_cloud_ct_gt = 'ArCoMo_Data/ArCoMo10/output_ground_truth/ArCoMo10_point_cloud_ct.xyz'
 
         # Ouput oct registration image
         self.path_oct_registration_frame_marked = f"ArCoMo_Data/ArCoMo{self.arcomo_number}/output/ArCoMo{self.arcomo_number}_registration_image_marked_oct.png"
@@ -292,14 +308,18 @@ class OCTAnalyzerGUI:
                                                              self.smoothing_kernel_size, self.threshold_value, self.display_results, self.save_images_for_controll)
 
         # Get rotation correction matrix
-        if self.axial_twist_correction_method == IMAGE:
-            oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame) 
+        if self.no_rotation == True:
+            oct_rotation_angles = np.zeros(self.OCT_end_frame - self.OCT_start_frame)
+        else:
+            if self.axial_twist_correction_method == IMAGE:
+                oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame) 
 
-        if self.axial_twist_correction_method == ICP:
-            oct_rotation_angles = oct_extractor.get_rotation_matrix_ICP(oct_lumen_contours, self.z_distance) 
+            if self.axial_twist_correction_method == ICP:
+                oct_rotation_angles = oct_extractor.get_rotation_matrix_ICP(oct_lumen_contours, self.z_distance) 
 
-        if self.axial_twist_correction_method == OVERLAP:
-            oct_rotation_angles = oct_extractor.get_rotation_matrix_overlap(oct_lumen_contours, self.z_distance, self.crop_top, self.crop_bottom, self.conversion_factor) 
+            if self.axial_twist_correction_method == OVERLAP:
+                oct_rotation_angles = oct_extractor.get_rotation_matrix_overlap(oct_lumen_contours, self.z_distance, self.crop_top, self.crop_bottom, self.conversion_factor) 
+        
         
 
         import  matplotlib.pyplot as plt

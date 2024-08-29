@@ -804,7 +804,6 @@ class oct_extraction:
         :param point_pairs: the matched point pairs [((x1, y1), (x1', y1')), ..., ((xi, yi), (xi', yi')), ...]
         :return: the rotation angle and the 2D translation (x, y) to be applied for matching the given pairs of points
         """
-
         x_mean = 0
         y_mean = 0
         xp_mean = 0
