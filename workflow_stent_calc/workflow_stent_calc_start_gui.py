@@ -355,7 +355,7 @@ class OCTAnalyzerGUI:
             self.add_instruction_text(instruction_text)
             calc_contours = oct_extractor.get_calc_contours(self.path_segmented_calc, self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame, self.z_distance, self.conversion_factor, self.crop_top, self.crop_bottom)
             # Align frames
-            oct_calc_point_cloud = oct_extractor.frames_alignment(calc_contours, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
+            oct_calc_point_cloud = oct_extractor.frames_alignment_calc(calc_contours, oct_rotation_angles, self.z_distance, self.image_hight, self.image_withd, self.conversion_factor)
             # Restructure frames
             grouped_calc = center_line_registrator.restructure_point_clouds(oct_calc_point_cloud, self.OCT_start_frame, self.OCT_end_frame, self.z_distance)
 
@@ -563,6 +563,9 @@ class OCTAnalyzerGUI:
         if processing_info == CALC or processing_info == STENT_AND_CALC:
             registered_oct_lumen, registered_oct_calc = center_line_registrator.register_OCT_frames_onto_centerline_calc(rotated_grouped_OCT_lumen, rotated_grouped_OCT_calc, centerline_registration_start, centerline_vectors,
                                                                                                 resampled_pc_centerline, self.OCT_registration_frame, self.OCT_start_frame, self.z_distance, rotated_registration_point_OCT, self.save_file, self.display_results)
+            np.savetxt(self.path_point_cloud_calc, registered_oct_calc, fmt='%f %f %f')
+            path_pure_oct = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_oct_frames.xyz'
+            np.savetxt(path_pure_oct, registered_oct_lumen, fmt='%f %f %f')
 
         if self.display_results or False:
             #------------------------------------------#

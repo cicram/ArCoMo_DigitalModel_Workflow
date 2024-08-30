@@ -118,6 +118,20 @@ class ContourDrawer:
                         self.final = open_cv_image.copy()
                         self.path_total = []
 
+
+                    elif key == ord("n") or key == ord("N"):
+                        # Save the path if the "S" key is pressed
+                        if self.path_total != []:
+                            # Fit a spline to the path and save the result
+                            fitted_spline = self.fit_spline_to_path(self.path_total, (page-OCT_start_frame)*z_distance, conversion_factor)
+                            if fitted_spline is not None:
+                                saved_splines.append(fitted_spline)
+                                self.path_total = []
+                            else:
+                                print("could not fit a spline, try again!")
+                                self.final = open_cv_image.copy()
+                                self.path_total = []
+
                     elif key == ord("s") or key == ord("S"):
                         # Save the path if the "S" key is pressed
                         if self.path_total != []:
