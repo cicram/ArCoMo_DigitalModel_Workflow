@@ -626,7 +626,7 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
     plt.legend()
     plt.xlabel('Centerline IDX')
     plt.ylabel('z-score (Lumen area)')
-    plt.title('Centerline IDX vs z-score')
+    # plt.title('Centerline IDX vs z-score')
     plt.grid(True)
 
     plt.savefig(folder_path_img + 'zscore_diff_3D.svg', format='svg')
