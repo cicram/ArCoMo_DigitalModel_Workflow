@@ -12,7 +12,7 @@ from scipy.interpolate import splprep, splev
 from shapely.geometry import Polygon
 import csv 
 import pandas as pd
-from scipy.stats import linregress, spearmanr
+from scipy.stats import linregress, spearmanr, iqr
 from scipy.ndimage.filters import median_filter
 
 def create_folder(folder_path):
@@ -319,6 +319,8 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
     min_val = np.min(quality_filtered)
     max_val = np.max(quality_filtered)
     median_val = np.median(quality_filtered)
+    q25_val = np.nanpercentile(quality_filtered,25)
+    q75_val = np.nanpercentile(quality_filtered,75)
     mean_val = np.mean(quality_filtered)
     std_dev = np.std(quality_filtered)
 
@@ -333,7 +335,7 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
         ["Std Dev", f"{std_dev:.2f}"]
     ]
 
-    mesh_res = [int(ArCoMo_number), round(min_val,2), round(max_val,2), round(median_val,2), round(mean_val,2), round(std_dev,2)]
+    mesh_res = [int(ArCoMo_number), round(min_val,2), round(max_val,2), round(median_val,2), round(q25_val,2),round(q75_val,2) ,round(mean_val,2), round(std_dev,2)]
 
     # Save the description to a csv file
     with open(mesh_results_csv, mode="w", newline="") as file:
@@ -357,7 +359,10 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
     mesh_points = np.vstack((x, y, z)).T
     kd_tree = KDTree(mesh_points)
 
-    radius = 3
+    if ArCoMo_number == "1200":
+        radius = 2.1    
+    else:
+        radius = 3
     data_model = []
     data_model.append(["Centerline IDX", "Area", "Filter radius"])
     data_gt = []
@@ -460,7 +465,7 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
     # Show the 2D plot
     plt.savefig(folder_path_img + 'vert_diff_2D.svg', format='svg')
     plt.savefig(folder_path_img + 'vert_diff_2D.png', format='png')
-    #plt.show()
+    # plt.show()
 
 
 
@@ -491,7 +496,7 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
 
     # Add second clipping plane
 
-    #p.show()
+    # p.show()
 
     ######### GROUND TRUTH #########################
     mesh = trimesh.load_mesh(ply_file_gt)
@@ -563,12 +568,12 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
                 data_gt.append([idx, area, radius])
 
     # Save areas to csv file
-    with open(model_csv, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerows(data_model)
-    with open(gt_csv, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerows(data_gt)
+    # with open(model_csv, 'w', newline='') as file:
+    #     writer = csv.writer(file)
+    #     writer.writerows(data_model)
+    # with open(gt_csv, 'w', newline='') as file:
+    #     writer = csv.writer(file)
+    #     writer.writerows(data_gt)
 
 
     ######################################################################################################################################
@@ -596,21 +601,19 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
     plt.savefig(folder_path_img + 'area_diff.svg', format='svg')
     #plt.show()
 
-    
-    
-   
-    mla_gt = np.min(area_gt)
-    maxla_gt = np.max(area_gt)
+    mla_gt = np.nanmin(area_gt)
+    maxla_gt = np.nanmax(area_gt)
 
-    mla_model = np.min(area_model)
-    maxla_model = np.max(area_model)
+    mla_model = np.nanmin(area_model)
+    maxla_model = np.nanmax(area_model)
     diff_area = np.abs(area_gt- area_model)
 
     rel_mla_diff = (np.abs(mla_model-mla_gt)/mla_gt)*100
     rel_maxla_diff = (np.abs(maxla_model-maxla_gt)/maxla_gt)*100
 
-    area_gt_zscore = (area_gt-np.mean(area_gt))/np.std(area_gt)
-    area_model_zscore = (area_model-np.mean(area_model))/np.std(area_model)
+    area_gt_zscore = (area_gt-np.nanmean(area_gt))/np.nanstd(area_gt)
+    area_model_zscore = (area_model-np.nanmean(area_model))/np.nanstd(area_model)
+    
 
     diff_zscore = np.abs(area_gt_zscore-area_model_zscore)
     spearman_c, spearman_p = spearmanr(area_model_zscore, area_gt_zscore)
@@ -619,9 +622,15 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
     print(f"MLA Model: {mla_model:.4f}")
     print(f"MLA error: {rel_mla_diff:.4f} %")
 
-
     fig = plt.figure()
-    plt.plot(df_gt['Centerline IDX'], area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
+    if ArCoMo_number == "1200":
+        plt.plot(df_gt['Centerline IDX']+4, area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
+    if ArCoMo_number == "1500":
+        plt.plot(df_gt['Centerline IDX']-2, area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
+    if ArCoMo_number == "700":
+        plt.plot(df_gt['Centerline IDX']+2, area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
+    else: 
+        plt.plot(df_gt['Centerline IDX'], area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
     plt.plot(df_model['Centerline IDX'], area_model_zscore, marker='o', linestyle='-', color=colors[1], label='Model')
     plt.legend()
     plt.xlabel('Centerline IDX')
@@ -652,40 +661,45 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
     # Statistical Analysis
     analysis_data = []
 
-    mean_abs_error = np.mean(diff_area)
+    mean_abs_error = np.nanmean(diff_area)
     median_abs_error = np.nanmedian(diff_area)
-    mean_std_error = np.std(diff_area)
-    max_abs_error = np.max(diff_area)
-    mean_squared_error = np.mean((area_model - area_gt) ** 2)
+    q25_err = np.nanpercentile(diff_area, 25)
+    q75_err = np.nanpercentile(diff_area, 75)
+    # iqr_error = q75-q25
+    mean_std_error = np.nanstd(diff_area)
+    max_abs_error = np.nanmax(diff_area)
+    mean_squared_error = np.nanmean((area_model - area_gt) ** 2)
     correlation_coefficient = np.corrcoef(area_model, area_gt)[0, 1]
     # spearman_c, spearman_p = spearmanr(area_model, area_gt)
 
-    mean_zscore_error = np.mean(diff_zscore)
-    std_zscore_error = np.std(diff_zscore)
+    mean_zscore_error = np.nanmean(diff_zscore)
+    std_zscore_error = np.nanstd(diff_zscore)
 
     analysis_data.append(["Overlap", max_abs_error, mean_abs_error, mean_std_error,
-                        median_abs_error, mean_squared_error, spearman_c,
+                        median_abs_error, q25_err, q75_err, mean_squared_error, spearman_c,
                             mean_zscore_error, std_zscore_error, rel_mla_diff, rel_maxla_diff])
     
-    area_res_fl = [max_abs_error, mean_abs_error, mean_std_error, 
-                median_abs_error, mean_squared_error, spearman_c, 
-                mean_zscore_error, std_zscore_error, rel_mla_diff, rel_maxla_diff]
-    
-    area_res = [round(num,2) for num in area_res_fl]
 
     print(f"Spearman rank correlation coefficient: {spearman_c:.4f}")
     print(f"P-value: {spearman_p:.4f}")
 
     # Create a DataFrame for the statistical analysis data
     analysis_df = pd.DataFrame(analysis_data, columns=['Method', 'Max Absolute Error', 'Mean Absolute Error', 'Mean STD Error', 
-                                                    'Median Absolute Error', 'Mean Squared Error', 'Spearman Coefficient',
+                                                    'Median Absolute Error', 'Q25', 'Q75','Mean Squared Error', 'Spearman Coefficient',
                                                     'Mean z-score diff','Std z-score diff', 'Relative MLA diff', 'Relative MaxLA diff'])
 
     # Save the DataFrame to an Excel file
     analysis_df.to_excel(analysis_output_csv, index=False)
 
     # LINEAR REGRESSION
-    slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_gt_zscore, area_model_zscore)
+    if ArCoMo_number == "1200":
+        slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_model_zscore[3:-1],area_gt_zscore[0:-4])
+    elif ArCoMo_number == "1500":
+        slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_model_zscore[0:-2],area_gt_zscore[1:-1])
+    elif ArCoMo_number == "700":
+        slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_model_zscore[2:-2],area_gt_zscore[0:-4])
+    else: 
+        slope_1, intercept_1, r_value_1, p_value_1, std_err_1 = linregress(area_gt_zscore, area_model_zscore)
 
     # Calculate R-squared
     r_squared_1 = r_value_1 ** 2
@@ -709,22 +723,37 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
     # Plotting
     plt.figure(figsize=(10, 8))
 
+    # # Plotting data points and fitted lines with matching colors
+    # plt.plot(area_gt, area_model, 'o', color=colors[1], label='Image correlation')
+    # plt.plot(area_gt, slope_1 * area_gt + intercept_1, '--', color=colors[1], label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
+
+    # # Plotting the 45-degree line for reference
+    # min_val = min(min(area_gt), min(area_model))
+    # max_val = max(max(area_gt), max(area_model))
+    # plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Reference line')
+
     # Plotting data points and fitted lines with matching colors
-    plt.plot(area_gt, area_model, 'o', color=colors[1], label='Image correlation')
-    plt.plot(area_gt, slope_1 * area_gt + intercept_1, '--', color=colors[1], label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f})')
+    plt.plot(area_gt_zscore, area_model_zscore, 'o', color=colors[1], label='Image correlation')
+    plt.plot(area_gt_zscore, slope_1 * area_gt_zscore + intercept_1, '--', color=colors[1], label=f'Fitted Line (slope={slope_1:.2f}, intercept={intercept_1:.2f}, r$^2$={r_squared_1:.2f})')
 
     # Plotting the 45-degree line for reference
-    min_val = min(min(area_gt), min(area_model))
-    max_val = max(max(area_gt), max(area_model))
+    min_val = min(min(area_gt_zscore), min(area_model_zscore))
+    max_val = max(max(area_gt_zscore), max(area_model_zscore))
     plt.plot([min_val, max_val], [min_val, max_val], 'k--', label='45° Reference line')
 
-    plt.xlabel('Ground Truth Area')
-    plt.ylabel('Measured Area')
+    plt.xlabel('Ground Truth Area z')
+    plt.ylabel('Measured Area z')
     plt.title('Measured Areas with Fitted Lines to Ground Truth')
     plt.legend()
 
     plt.savefig(folder_path_img + 'lin_reg.svg', format='svg')
-    #plt.show()
+    plt.show()
+
+    area_res_fl = [max_abs_error, mean_abs_error, mean_std_error, 
+                median_abs_error, q25_err, q75_err, mean_squared_error, spearman_c, 
+                mean_zscore_error, std_zscore_error, rel_mla_diff, rel_maxla_diff, r_squared_1]
+    
+    area_res = [round(num,2) for num in area_res_fl]
 
     results = mesh_res + area_res
 
@@ -734,14 +763,14 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
 # CHANGE NUMBER HERE AND FOLDER LOCATION
 
 # Analyse all
-if True:
+if False:
     ArCoMo_numbers = ["100", "200", "300", "500", "700", "800", "900", "1000", "1100", "1200", "1300", "1400","1500"]
     ArCoMo_numbers_gt = ["1", "2", "3", "5", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
 
 # Analyse selected
-if False:
-    ArCoMo_numbers = ["100"]
-    ArCoMo_numbers_gt = ["1"]
+if True:
+    ArCoMo_numbers = ["700"]
+    ArCoMo_numbers_gt = ["7"]
 
 ArCoMo_eval_data = []
 
@@ -756,10 +785,10 @@ for itr in range(len(ArCoMo_numbers)):
     print(ArCoMo_eval_data)
     
 
-ArCoMo_eval_header = ['ArCoMo Number', 'Min Vert. diff', 'Max Vert. diff', 'Median Vert. diff', 'Mean Vert. diff', 
+ArCoMo_eval_header = ['ArCoMo Number', 'Min Vert. diff', 'Max Vert. diff', 'Median Vert. diff', 'Q25', 'Q75', 'Mean Vert. diff', 
                     'Std. Vert. diff','Max Absolute Error [mm2]', 'Mean Absolute Error [mm2]', 'Mean STD Error [mm2]', 
-                    'Median Absolute Error [mm2]', 'Mean Squared Error [mm2]', 'Spearman Coefficient',
-                    'Mean z-score diff [mm/mm]','Std z-score diff [mm/mm]', 'Relative MLA diff [%]', 'Relative MaxLA diff [%]']
+                    'Median Absolute Error [mm2]', 'Q25 [mm2]', 'Q75 [mm2]' ,'Mean Squared Error [mm2]', 'Spearman Coefficient',
+                    'Mean z-score diff [mm/mm]','Std z-score diff [mm/mm]', 'Relative MLA diff [%]', 'Relative MaxLA diff [%]', 'r2']
 
 file_path = "ArCoMo_evaluation_results.csv"
 
