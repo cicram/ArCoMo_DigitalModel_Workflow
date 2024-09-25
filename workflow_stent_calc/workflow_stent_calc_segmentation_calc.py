@@ -100,14 +100,18 @@ class ContourDrawer:
                         if existing_z_value == (page - OCT_start_frame) * z_distance:
                             # Draw the existing contour
                             cv.polylines(self.final, [np.array(existing_contour)[:, :2].astype(int)], isClosed=True, color=(0, 0, 255), thickness=1)
+                            
                             # Add x and y values to self.path_total
                             existing_x, existing_y, existing_z = zip(*existing_contour)
-                            existing_x = [int(val/conversion_factor) for val in existing_x]
-                            existing_y = [int(val/conversion_factor) for val in existing_y]
+                            existing_x = [int(val / conversion_factor) for val in existing_x]
+                            existing_y = [int(val / conversion_factor) for val in existing_y]
                             self.path_total.append(list(zip(existing_x, existing_y)))
-                            for itr in range(len(self.path_total[0])-1):
-                                cv.line(self.final, (self.path_total[0][itr]), (self.path_total[0][itr+1]), (0, 0, 255), 1)
-                            cv.imshow("image", self.final)
+
+                            # Draw lines for the current contour
+                            for itr in range(len(self.path_total[-1]) - 1):  # Use -1 to get the last appended contour
+                                cv.line(self.final, (self.path_total[-1][itr]), (self.path_total[-1][itr + 1]), (0, 0, 255), 1)
+
+                    cv.imshow("image", self.final)
 
                 while True:
                     cv.imshow("image", self.final)
@@ -120,7 +124,6 @@ class ContourDrawer:
 
 
                     elif key == ord("n") or key == ord("N"):
-                        # Save the path if the "S" key is pressed
                         if self.path_total != []:
                             # Fit a spline to the path and save the result
                             fitted_spline = self.fit_spline_to_path(self.path_total, (page-OCT_start_frame)*z_distance, conversion_factor)

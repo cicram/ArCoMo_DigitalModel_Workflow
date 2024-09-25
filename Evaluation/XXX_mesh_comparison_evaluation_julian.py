@@ -83,8 +83,31 @@ def resample_center_line(center_line, z_distance):
     # Convert the resampled points to a NumPy array
     resampled_points = np.array(resampled_points)
 
+    if True:
+        x_orig = center_line[:, 0]
+        y_orig = center_line[:, 1]
+        z_orig = center_line[:, 2]
+        x_resampled = resampled_points[:, 0]
+        y_resampled = resampled_points[:, 1]
+        z_resampled = resampled_points[:, 2]
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(x_resampled, y_resampled, z_resampled, c="blue", marker='o')
+        ax.scatter(x_resampled[351]+0.1, y_resampled[351]+0.1, z_resampled[351]+0.1, c="black", marker='o')
+        ax.scatter(x_resampled[156]+0.1, y_resampled[156]+0.1, z_resampled[156]+0.1, c="black", marker='o')
+        ax.scatter(x_resampled[413]+0.1, y_resampled[413]+0.1, z_resampled[413]+0.1, c="black", marker='o')
+
+        ax.scatter(x_orig, y_orig, z_orig, c="red", marker='o')
+
+        ax.set_xlabel('Px')
+        ax.set_ylabel('Py')
+        ax.set_zlabel('Pz')
+        plt.show()
+
+
     return resampled_points
 
+    
 def filter_points_within_radius(points, center_point, radius):
     """
     Filter points that are within a certain radius from a center point.
@@ -199,8 +222,8 @@ def convert_to_2d(points_3d, origin, normal):
 
 ###########################################################################################################
 # CHANGE NUMBER HERE AND FOLDER LOCATION
-ArCoMo_numbers = ["900", "1000", "1100", "1300", "1500"]
-ArCoMo_numbers_gt = ["9", "10", "11", "13", "15"]
+ArCoMo_numbers = ["1200"]
+ArCoMo_numbers_gt = ["12"]
 
 for itr in range(len(ArCoMo_numbers)):
     ArCoMo_number = ArCoMo_numbers[itr]
