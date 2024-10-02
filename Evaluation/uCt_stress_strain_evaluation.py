@@ -9,12 +9,14 @@ import numpy as np
 #######################################################
 # File paths
 #######################################################
+spline_points_0bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_0bar_segmentation/output_spline_points_0_bar.csv'
 spline_points_4bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_4bar_segmentation/output_spline_points_4_bar.csv'
 spline_points_8bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_8bar_segmentation/output_spline_points_8_bar.csv'
 spline_points_12bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_12bar_segmentation/output_spline_points_12_bar.csv'
 spline_points_16bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_16bar_segmentation/output_spline_points_16_bar.csv'
 spline_points_18bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_18bar_segmentation/output_spline_points_18_bar.csv'
 spline_points_20bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_20bar_segmentation/output_spline_points_20_bar.csv'
+areas_0bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_0bar_segmentation/output_areas_0_bar_calc.csv'  
 areas_4bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_4bar_segmentation/output_areas_4_bar.csv'  
 areas_8bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_8bar_segmentation/output_areas_8_bar.csv'  
 areas_12bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_12bar_segmentation/output_areas_12_bar.csv'  
@@ -25,6 +27,7 @@ areas_20bar_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_20bar_segmentation/outp
 #######################################################
 # Reading the CSV files into grouped data
 #######################################################
+df_area_0_bar = pd.read_csv(areas_0bar_csv)
 df_area_4_bar = pd.read_csv(areas_4bar_csv)
 df_area_8_bar = pd.read_csv(areas_8bar_csv)
 df_area_12_bar = pd.read_csv(areas_12bar_csv)
@@ -32,6 +35,7 @@ df_area_16_bar = pd.read_csv(areas_16bar_csv)
 df_area_18_bar = pd.read_csv(areas_18bar_csv)
 df_area_20_bar = pd.read_csv(areas_20bar_csv)
 
+grouped_points_0bar = defaultdict(list)
 grouped_points_4bar = defaultdict(list)
 grouped_points_8bar = defaultdict(list)
 grouped_points_12bar = defaultdict(list)
@@ -46,6 +50,7 @@ def read_spline_points(csv_file, grouped_points):
             x, y, idx = float(row[0]), float(row[1]), float(row[2])
             grouped_points[idx].append([x, y])
 
+read_spline_points(spline_points_0bar_csv, grouped_points_0bar)
 read_spline_points(spline_points_4bar_csv, grouped_points_4bar)
 read_spline_points(spline_points_8bar_csv, grouped_points_8bar)
 read_spline_points(spline_points_12bar_csv, grouped_points_12bar)
@@ -73,6 +78,7 @@ def compute_average_radius(x_values, y_values):
 # Data processing and calculations
 #######################################################
 # Internal pressures in Pascals
+P_0bar = 0
 P_4bar = 4 * 1e5
 P_8bar = 8 * 1e5
 P_12bar = 12 * 1e5
@@ -83,14 +89,14 @@ scaling = 1  # Scaling factor for point coordinates
 z_spacing = 0.0172
 
 # Initialize storage for radii and hoop stress at each pressure
-radii = {4: [], 8: [], 12: [], 18: []}
-sigmas = {4: [], 8: [], 12: [],  18: []}
+radii = {0: [], 4: [], 8: [], 12: [], 18: []}
+sigmas = {0: [], 4: [], 8: [], 12: [],  18: []}
 z_values = sorted(grouped_points_4bar.keys())  # Assuming same z-values for all pressures
 
 # Iterate through z-heights for each pressure
 for z_height in z_values:
-    for pressure, grouped_points in zip([4, 8, 12, 18],
-                                        [grouped_points_4bar, grouped_points_8bar, grouped_points_12bar, 
+    for pressure, grouped_points in zip([0, 4, 8, 12, 18],
+                                        [grouped_points_0bar, grouped_points_4bar, grouped_points_8bar, grouped_points_12bar, 
                                           grouped_points_18bar]):
         points = grouped_points.get(z_height, [])
         if points:
@@ -112,8 +118,8 @@ colors = ['black', 'blue', 'green', 'red', 'yellow', 'magenta']
 # Subplot 1: Hoop stresses
 ax1 = fig.add_subplot(gs[0, 0])
 idx = 0
-for pressure in [4, 8, 12, 18]:
-    ax1.plot(z_values, sigmas[pressure], label=f'Sigma {pressure} bar', color=colors[idx])
+for pressure in [0, 4, 8, 12, 18]:
+    ax1.plot(z_values, sigmas[pressure], label=f'Stress {pressure} bar', color=colors[idx])
     idx = idx+1
 ax1.set_xlabel('Z Heights')
 ax1.set_ylabel('Hoop Stress (Pa)')
@@ -123,7 +129,7 @@ ax1.set_title('Hoop Stress vs Z Heights')
 # Subplot 2: Radii comparisons
 ax2 = fig.add_subplot(gs[1, 0])
 idx = 0
-for pressure in [4, 8, 12, 18]:
+for pressure in [0, 4, 8, 12, 18]:
     ax2.plot(z_values, radii[pressure], label=f'Radii {pressure} bar', color=colors[idx])
     idx = idx+1
 ax2.set_xlabel('Z Heights')
@@ -133,10 +139,11 @@ ax2.set_title('Radius vs Z Heights')
 
 # Subplot 3: Area comparisons
 ax3 = fig.add_subplot(gs[2, 0])
-ax3.plot(z_values, df_area_4_bar["Area"], label='Area 4bar', color=colors[0])
-ax3.plot(z_values, df_area_8_bar["Area"], label='Area 8bar', color=colors[1])
-ax3.plot(z_values, df_area_12_bar["Area"], label='Area 12bar', color=colors[2])
-ax3.plot(z_values, df_area_18_bar["Area"], label='Area 18bar', color=colors[3])
+ax3.plot(z_values, df_area_0_bar["Area"], label='Area 0bar', color=colors[0])
+ax3.plot(z_values, df_area_4_bar["Area"], label='Area 4bar', color=colors[1])
+ax3.plot(z_values, df_area_8_bar["Area"], label='Area 8bar', color=colors[2])
+ax3.plot(z_values, df_area_12_bar["Area"], label='Area 12bar', color=colors[3])
+ax3.plot(z_values, df_area_18_bar["Area"], label='Area 18bar', color=colors[4])
 
 ax3.set_xlabel('Z Heights')
 ax3.set_ylabel('Area (mm^2)')
@@ -191,8 +198,8 @@ for z_height in z_values:
     radii_at_z = {}
     sigmas_at_z = {}
     
-    for pressure, grouped_points in zip([4, 8, 12, 18],
-                                        [grouped_points_4bar, grouped_points_8bar, grouped_points_12bar, 
+    for pressure, grouped_points in zip([0, 4, 8, 12, 18],
+                                        [grouped_points_0bar, grouped_points_4bar, grouped_points_8bar, grouped_points_12bar, 
                                          grouped_points_18bar]):
         points = grouped_points.get(z_height, [])
         if points:
@@ -205,16 +212,16 @@ for z_height in z_values:
             sigmas_at_z[pressure] = sigma
     
     # Ensure we have radius at 4 bar for comparison
-    if 4 in radii_at_z:
-        radius_4bar = radii_at_z[4]  # Radius at 4 bar
+    if 0 in radii_at_z:
+        radius_0bar = radii_at_z[0]  # Radius at 4 bar
 
         # Now compute only the positive deltas (left pressure > right pressure)
         pressures = sorted(radii_at_z.keys(), reverse=True)  # Sort pressures in descending order
         for (p1, p2) in combinations(pressures, 2):  # Only keep combinations where p1 > p2
-            if p2 == 4:    
+            if p2 == 0:    
                 # Compute deltas for radius and sigma
                 delta_radius = radii_at_z[p1] - radii_at_z[p2]
-                delta_radius_percentage = (delta_radius / radius_4bar) * 100  # Percentage change
+                delta_radius_percentage = (delta_radius / radius_0bar) * 100  # Percentage change
                 delta_sigma = sigmas_at_z[p1] - sigmas_at_z[p2]
                 
                 # Store deltas in the dictionaries
@@ -259,13 +266,20 @@ for i, z_height in enumerate(z_values):
         
         # Plot the linear fit line
         line = model.predict(X)
-        ax.plot(delta_r_vals, line, color='r', label=f"Slope: {slope:.3f}")
-        ax.legend()
+        # Plotting the line
+        ax.plot(delta_r_vals, line, color='r')
+
+        # Displaying the slope in the top right corner of the subplot
+        ax.text(0.95, 0.95, f"Slope: {slope / 1e6:.2f} (1e6)", 
+                transform=ax.transAxes, 
+                fontsize=8, 
+                verticalalignment='top', 
+                horizontalalignment='right')        
     
     # Set titles and labels for each subplot
-    ax.set_title(f'Z Height = {z_height}')
-    ax.set_xlabel('Delta Radius (%)')
-    ax.set_ylabel('Delta Sigma')
+    ax.set_title(f'Z Height = {round(z_height, 2)}')
+    ax.set_xlabel('Radius (%)')
+    ax.set_ylabel('Hoop stress')
 
 # Adjust the layout to prevent overlap and add space between subplots
 plt.subplots_adjust(hspace=0.5, wspace=0.4)

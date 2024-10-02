@@ -31,6 +31,8 @@ for idx, val in enumerate(cutting_points):
 
 ouput_csv = 'C:/Users/JL/Code/uCT/BIO18_LAD_ballon_4bar_segmentation/output_areas_4_bar_calc.csv'
 
-with open(ouput_csv, 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerows(data_model)
+if False:
+    with open(ouput_csv, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(data_model)
+
