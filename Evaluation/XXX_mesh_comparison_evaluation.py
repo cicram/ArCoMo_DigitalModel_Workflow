@@ -144,7 +144,7 @@ def compute_area(points):
     x_points = [point[0] for point in points]
     y_points = [point[1] for point in points]
     
-    if False:
+    if True:
         plt.figure(figsize=(8, 8))
         plt.plot(x_spline, y_spline, label='Fitted Spline', color='blue')
         plt.plot(x_points, y_points, 'x', label='Original Points', color='red')
@@ -590,8 +590,8 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
     area_model = median_filter(df_model['Area'], size=5)
 
     fig = plt.figure()
-    plt.plot(df_gt['Centerline IDX'], area_gt, marker='o', linestyle='-', color=colors[0], label='Ground truth')
-    plt.plot(df_model['Centerline IDX'], area_model, marker='o', linestyle='-', color=colors[1], label='Model')
+    plt.plot(df_gt['Centerline IDX'], area_gt, marker='o', linestyle='-', color=colors[0], label='Original Model')
+    plt.plot(df_model['Centerline IDX'], area_model, marker='o', linestyle='-', color=colors[1], label='Derivative Model')
     plt.legend()
     plt.xlabel('Centerline IDX')
     plt.ylabel('Area')
@@ -624,14 +624,14 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
 
     fig = plt.figure()
     if ArCoMo_number == "1200":
-        plt.plot(df_gt['Centerline IDX']+4, area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
-    if ArCoMo_number == "1500":
-        plt.plot(df_gt['Centerline IDX']-2, area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
-    if ArCoMo_number == "700":
-        plt.plot(df_gt['Centerline IDX']+2, area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
+        plt.plot(df_gt['Centerline IDX']+4, area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Original Model')
+    elif ArCoMo_number == "1500":
+        plt.plot(df_gt['Centerline IDX']-2, area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Original Model')
+    elif ArCoMo_number == "700":
+        plt.plot(df_gt['Centerline IDX']+2, area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Original Model')
     else: 
-        plt.plot(df_gt['Centerline IDX'], area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Ground truth')
-    plt.plot(df_model['Centerline IDX'], area_model_zscore, marker='o', linestyle='-', color=colors[1], label='Model')
+        plt.plot(df_gt['Centerline IDX'], area_gt_zscore, marker='o', linestyle='-', color=colors[0], label='Original Model')
+    plt.plot(df_model['Centerline IDX'], area_model_zscore, marker='o', linestyle='-', color=colors[1], label='Derivative Model')
     plt.legend()
     plt.xlabel('Centerline IDX')
     plt.ylabel('z-score (Lumen area)')
@@ -747,7 +747,7 @@ def ArCoMo_eval(ArCoMo_number, ArCoMo_number_gt):
     plt.legend()
 
     plt.savefig(folder_path_img + 'lin_reg.svg', format='svg')
-    plt.show()
+    # plt.show()
 
     area_res_fl = [max_abs_error, mean_abs_error, mean_std_error, 
                 median_abs_error, q25_err, q75_err, mean_squared_error, spearman_c, 
@@ -769,8 +769,8 @@ if False:
 
 # Analyse selected
 if True:
-    ArCoMo_numbers = ["700"]
-    ArCoMo_numbers_gt = ["7"]
+    ArCoMo_numbers = ["1400"]
+    ArCoMo_numbers_gt = ["14"]
 
 ArCoMo_eval_data = []
 

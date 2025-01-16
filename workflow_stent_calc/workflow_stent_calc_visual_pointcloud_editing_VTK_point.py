@@ -228,13 +228,15 @@ class point_cloud_visual_editing:
     def create_point_cloud_actors(self):
         self.actor1 = self.create_point_cloud_actor(self.point_cloud1, [1, 0, 0])
         self.actor2 = self.create_point_cloud_actor(self.point_cloud2, [0, 0, 1])
-        self.actor3 = self.create_point_cloud_actor(self.point_cloud3, [1, 1, 0])
-        self.actor4 = self.create_point_cloud_actor(self.point_cloud4, [0, 0, 0])
+        if self.point_cloud3 is not None:
+            self.actor3 = self.create_point_cloud_actor(self.point_cloud3, [1, 1, 0])
+            self.actor4 = self.create_point_cloud_actor(self.point_cloud4, [0, 0, 0])
         
         self.actor1.GetProperty().SetPointSize(3)
         self.actor2.GetProperty().SetPointSize(3)
-        self.actor3.GetProperty().SetPointSize(3)
-        self.actor4.GetProperty().SetPointSize(5)
+        if self.point_cloud3 is not None:
+            self.actor3.GetProperty().SetPointSize(3)
+            self.actor4.GetProperty().SetPointSize(5)
 
     def hide_ct_points(self, obj, event):
         if self.ct_points_state == 1:

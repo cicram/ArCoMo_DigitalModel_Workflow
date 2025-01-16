@@ -219,7 +219,7 @@ class center_line_registration:
 
         return vectors
     
-    def restructure_point_clouds(self, oct_points, OCT_start_frame, OCT_end_frame, z_distance):
+    def restructure_point_clouds(self, oct_points, OCT_start_frame, OCT_end_frame, z_distance, oct= True):
         data = []
         for parts in oct_points:
             if len(parts) == 3:
@@ -244,7 +244,10 @@ class center_line_registration:
 
         # Create a new dictionary with updated z-values
         flipped_grouped_data = {}
-        max_z = round((OCT_end_frame - OCT_start_frame - 1) * z_distance, 1)  # Get the maximum z-value
+        if oct == True:
+            max_z = round((OCT_end_frame - OCT_start_frame - 1) * z_distance, 1)  # Get the maximum z-value
+        if oct == False:
+            max_z = max(t[2] for sublist in oct_points for t in sublist)
         for i, (z, group) in enumerate(sorted_data):
                 flipped_grouped_data[max_z - z] = group
 
@@ -687,14 +690,18 @@ class center_line_registration:
         return oct_points 
 
 
-    def get_oct_lumen_rotation_matrix(self, blue_point, OCT_start_frame, orig_regpoint, resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_CT, OCT_registration_frame, z_distance, display_results):
+    def get_oct_lumen_rotation_matrix(self, blue_point, OCT_start_frame, orig_regpoint, resampled_pc_centerline, centerline_registration_start, grouped_OCT_frames, registration_point_OCT, registration_point_CT, OCT_registration_frame, z_distance, display_results, oct = True):
         target_centerline_point = resampled_pc_centerline[centerline_registration_start]
         blue_point_ = resampled_pc_centerline[blue_point]
 
         # find correct frame
-        registration_frame = grouped_OCT_frames[round(grouped_OCT_frames[0][0][2] - ((OCT_registration_frame - OCT_start_frame)* z_distance), 1)]
-        registered_frame = np.array(registration_frame)  # Copy the frame points
-
+        if oct == True:
+            registration_frame = grouped_OCT_frames[round(grouped_OCT_frames[0][0][2] - ((OCT_registration_frame - OCT_start_frame)* z_distance), 1)]
+            registered_frame = np.array(registration_frame)  # Copy the frame points
+        if oct == False:
+            registration_frame = grouped_OCT_frames[max(grouped_OCT_frames.keys())]
+            registered_frame = np.array(registration_frame)  # Copy the frame points
+            
         # Perform the translation to center the spline and registration point on the centerline point.
         translation_vector = target_centerline_point - registered_frame.mean(axis=0)
         registered_frame += translation_vector
