@@ -1,2 +1,2 @@
-Registration_main_branch_start_idx: 143
-Registration_side_branch_start_idx: 93
+Registration_main_branch_start_idx: 132
+Registration_side_branch_start_idx: 88

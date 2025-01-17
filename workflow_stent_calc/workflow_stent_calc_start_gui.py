@@ -351,7 +351,7 @@ class OCTAnalyzerGUI:
 
         # Get oct calc contours
         if processing_info == CALC or processing_info == STENT_AND_CALC:
-            instruction_text = "OCT calc extraction is performed. Instructions: Draw path with left mouse click then release. Press 'C' to accept drawn path. Press 'R' to restart. Press 'S' to save path."
+            instruction_text = "OCT calc extraction is performed. Instructions: Draw path with left mouse click then release. Press 'N' to accept drawn path. Press 'R' to restart. Press 'S' to save path."
             self.add_instruction_text(instruction_text)
             calc_contours = oct_extractor.get_calc_contours(self.path_segmented_calc, self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame, self.z_distance, self.conversion_factor, self.crop_top, self.crop_bottom)
             # Align frames

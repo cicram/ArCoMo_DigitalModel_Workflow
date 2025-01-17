@@ -130,6 +130,7 @@ class ContourDrawer:
                             if fitted_spline is not None:
                                 saved_splines.append(fitted_spline)
                                 self.path_total = []
+                                print("Spline saved")
                             else:
                                 print("could not fit a spline, try again!")
                                 self.final = open_cv_image.copy()
