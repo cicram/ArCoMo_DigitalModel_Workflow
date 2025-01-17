@@ -165,5 +165,7 @@ cython_debug/
 */my_aligned_points.txt
 *my_aligned_points.txt
 
-ArCoMo_Data/
-NARCO_Data/
+ArCoMo_Data
+NARCO_Data
+
+req.txt
