@@ -1,3 +1,0 @@
-oct_start: 36
-oct_end: 241
-oct_registration: 119
