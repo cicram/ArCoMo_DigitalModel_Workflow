@@ -1,0 +1,3 @@
+Registration_main_branch_start_idx: 360
+Registration_side_branch_start_idx: 532
+Registration_point: -10.100194773286468 -243.1582381761384 1791.7310393092857
