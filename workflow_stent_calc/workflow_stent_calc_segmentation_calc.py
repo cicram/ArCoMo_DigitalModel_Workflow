@@ -76,11 +76,11 @@ class ContourDrawer:
         saved_splines = []
 
         with Image.open(input_file) as im:
-            for page in range(OCT_start_frame, OCT_end_frame, 1):
-                print(f"Current page: {page}")
+            for frame_id in range(OCT_start_frame, OCT_end_frame, 1):
+                print(f"Frame number: {frame_id}")
                 next_slide = False
                 self.path_total = []
-                im.seek(page)  # Move to the current page (frame)
+                im.seek(frame_id)  # Move to the current frame
                 image = np.array(im.convert('RGB'))  # Convert PIL image to NumPy array
                 image_flipped = np.flipud(image)
                 height, width, channels = image_flipped.shape
@@ -95,9 +95,9 @@ class ContourDrawer:
 
                 if existing_contours:
                     for existing_contour in existing_contours:
-                        # Check if the existing contour matches the current page
+                        # Check if the existing contour matches the current frame
                         existing_z_value = existing_contour[0][2]
-                        if existing_z_value == (page - OCT_start_frame) * z_distance:
+                        if existing_z_value == (frame_id - OCT_start_frame) * z_distance:
                             # Draw the existing contour
                             cv.polylines(self.final, [np.array(existing_contour)[:, :2].astype(int)], isClosed=True, color=(0, 0, 255), thickness=1)
                             
@@ -126,10 +126,11 @@ class ContourDrawer:
                     elif key == ord("n") or key == ord("N"):
                         if self.path_total != []:
                             # Fit a spline to the path and save the result
-                            fitted_spline = self.fit_spline_to_path(self.path_total, (page-OCT_start_frame)*z_distance, conversion_factor)
+                            fitted_spline = self.fit_spline_to_path(self.path_total, (frame_id-OCT_start_frame)*z_distance, conversion_factor)
                             if fitted_spline is not None:
                                 saved_splines.append(fitted_spline)
                                 self.path_total = []
+                                print("Spline saved")
                             else:
                                 print("could not fit a spline, try again!")
                                 self.final = open_cv_image.copy()
@@ -139,7 +140,7 @@ class ContourDrawer:
                         # Save the path if the "S" key is pressed
                         if self.path_total != []:
                             # Fit a spline to the path and save the result
-                            fitted_spline = self.fit_spline_to_path(self.path_total, (page-OCT_start_frame)*z_distance, conversion_factor)
+                            fitted_spline = self.fit_spline_to_path(self.path_total, (frame_id-OCT_start_frame)*z_distance, conversion_factor)
                             if fitted_spline is not None:
                                 saved_splines.append(fitted_spline)
                                 break
