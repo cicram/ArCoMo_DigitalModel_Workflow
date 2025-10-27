@@ -59,10 +59,12 @@ class OCTAnalyzerGUI:
 
     def create_widgets(self):
         # Labels
-        self.label_oct_registration_frame = ttk.Label(self.master, text="OCT Registration Frame:")
-        self.label_oct_start = ttk.Label(self.master, text="OCT Start Frame:")
-        self.label_oct_end = ttk.Label(self.master, text="OCT End Frame:")
-        self.label_arcomo_number = ttk.Label(self.master, text="ArCoMo Number:")
+        self.label_oct_registration_frame = ttk.Label(self.master, text="OCT registration frame:")
+        self.label_oct_start = ttk.Label(self.master, text="OCT start frame:")
+        self.label_oct_end = ttk.Label(self.master, text="OCT end frame:")
+        self.label_arcomo_number = ttk.Label(self.master, text="ArCoMo number:")
+        self.label_correction_method = ttk.Label(self.master, text="Axial twist correction method:")
+
 
         # Entry Widgets
         self.entry_oct_registration_frame = ttk.Entry(self.master)
@@ -89,12 +91,12 @@ class OCTAnalyzerGUI:
         
         self.save_intermediate_steps_var = tk.IntVar()
         self.check_save_intermediate_steps = ttk.Checkbutton(self.master,
-                                                             text="Save Intermediate Steps",
+                                                             text="Save intermediate steps",
                                                              variable=self.save_intermediate_steps_var)
 
         self.display_intermediate_results_var = tk.IntVar()
         self.check_display_intermediate_results = ttk.Checkbutton(self.master,
-                                                                 text="Display Intermediate Results",
+                                                                 text="Display intermediate results",
                                                                  variable=self.display_intermediate_results_var)
         
         self.include_stent_var = tk.IntVar()
@@ -105,7 +107,7 @@ class OCTAnalyzerGUI:
         
         # Button
         self.run_button = ttk.Button(self.master, text="Run Analysis", command=self.run_analysis)
-        self.get_oct_frames_info_button = ttk.Button(self.master, text="Get OCT Frames Info", command=self.get_oct_frames_info)
+        self.get_oct_frames_info_button = ttk.Button(self.master, text="Get OCT frames info", command=self.get_oct_frames_info)
 
         # Text Widget for Instructions
         instructions_text = "Enter the ArCoMo Number and click 'Get OCT Frames Info'.\n" \
@@ -116,7 +118,6 @@ class OCTAnalyzerGUI:
         #self.instructions_text_widget.configure(state=tk.DISABLED)  # Make the text widget read-only
         self.instructions_label.grid(row=12, column=0, columnspan=2, padx=10, pady=5, sticky="w")
         self.instructions_text_widget.grid(row=13, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        self.label_correction_method = ttk.Label(self.master, text="Axial Twist Correction Method:")
 
         # Layout
         self.label_arcomo_number.grid(row=0, column=0, padx=10, pady=5, sticky="w")
