@@ -1,26 +1,15 @@
-from PIL import Image
-import numpy as np
-import cv2 as cv
-import math
 from scipy.interpolate import splprep, splev
-import os
-import math
-import numpy as np
-from sklearn.neighbors import NearestNeighbors
-from scipy.ndimage import rotate
 from PIL import Image
-import cv2
-import numpy as np
-from PIL import Image, ImageChops
-import matplotlib.pyplot as plt
-import tkinter as tk
-from tkinter import messagebox
 import cv2 as cv
 import numpy as np
-import math
-from dijkstar import Graph, find_path
 
 class ContourDrawer:
+    """ Contour drawer class
+
+    If include calc is selected on main GUI, this class will allow the inclusion of existing calcium segmentation as
+    well as their modification or to create your own drawings on the image to be included in the 3D model.
+    """
+
     def __init__(self):
         self.retPt = []
         self.drawing = False
