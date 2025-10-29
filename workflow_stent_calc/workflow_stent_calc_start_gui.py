@@ -6,6 +6,7 @@ from workflow_stent_calc_visual_pointcloud_editing_VTK_point import point_cloud_
 from workflow_stent_calc_center_line_smooting_gui import PointCloudSmoothingVisualizer
 from workflow_stent_calc_center_line_registration_point_selection_GUI import PointCloudRegistrationPointSelectionVisualizer
 from workflow_stent_calc_image_visualization_on_model import OctImageVisualizier
+from rm_close_points import  rm_close_points
 
 import open3d as o3d
 import tkinter as tk
@@ -644,6 +645,9 @@ class OCTAnalyzerGUI:
         for point in ct_points_:
             ct_points.append([point[0], point[1], point[2]])
         ct_points = np.array(ct_points)
+
+        # Remove CT points which are close to the OCT
+        ct_points = rm_close_points(ct_points,registered_oct_lumen)
 
         # Visual point cloud editing:
         point_cloud_visual_editior = point_cloud_visual_editing()
