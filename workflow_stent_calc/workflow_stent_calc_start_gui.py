@@ -263,7 +263,7 @@ class OCTAnalyzerGUI:
 
         elif self.include_stent and not self.include_calc:
             # Run workflow just with stent
-            print("stent workflow")
+            print("\n--- Stent workflow ---")
             self.input_file_OCT = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_lumen.tif'
             self.input_file_OCT_stent = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_stent.tif'
             self.input_file_OCT_blank = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/ArCoMo' + str(self.arcomo_number) +'_oct_stent_blank.tif'
@@ -275,7 +275,7 @@ class OCTAnalyzerGUI:
 
         elif not self.include_stent and self.include_calc:
             # Run workflow just with calc
-            print("calc workflow")
+            print("\n--- Calc workflow ---")
             self.path_point_cloud_calc = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_point_cloud_calc.xyz'
             self.path_segmented_calc = 'ArCoMo_Data/ArCoMo' + str(self.arcomo_number) + '/output/ArCoMo' + str(self.arcomo_number) + '_segmented_calc.xyz'
             processing_info = CALC
@@ -283,7 +283,7 @@ class OCTAnalyzerGUI:
 
         else:
             # Run basic workflow
-            print("basic workflow")
+            print("\n--- Basic workflow ---")
             processing_info = BASIC
             self.run_processing(processing_info)
 
@@ -312,7 +312,9 @@ class OCTAnalyzerGUI:
         # Get rotation correction matrix
         if self.no_rotation == True:
             oct_rotation_angles = np.zeros(self.OCT_end_frame - self.OCT_start_frame)
+            print('\n--- No rotation selected ---')
         else:
+            print('\n--- Rotating slices ---')
             if self.axial_twist_correction_method == IMAGE:
                 oct_rotation_angles = oct_extractor.get_rotation_matrix(self.input_file_OCT_blank, self.OCT_start_frame, self.OCT_end_frame) 
 

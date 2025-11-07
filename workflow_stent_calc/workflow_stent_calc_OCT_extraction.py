@@ -664,7 +664,7 @@ class oct_extraction:
     # Function to handle mouse clicks
     def mouse_callback(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
-            print(f'Registration point selected at (x={x}, y={y})')
+            print(f'\n--- Registration point selected at (x={x}, y={y}) ---')
             self.oct_registration_point_x = x
             self.oct_registration_point_y = y
              # Close the OpenCV window
@@ -952,8 +952,6 @@ class oct_extraction:
             if (abs(closest_rot_angle) < convergence_rotation_threshold) \
                     and (abs(closest_translation_x) < convergence_translation_threshold) \
                     and (abs(closest_translation_y) < convergence_translation_threshold):
-                
-                print('Converged!')
 
                 if False:
                     # Plotting outside the loop
@@ -1009,7 +1007,6 @@ class oct_extraction:
                                 max_overlap = overlap
                                 rotation = angle/20
                         overlap = self.calculate_overlap(current_contour, previous_contour, rotation, center_x, center_y, height, width, conversion_factor, False)
-                        print(f'rotation = {rotation}')
                         previous_contour = current_contour
                         rotation_total += rotation
                         rotations.append(rotation)
