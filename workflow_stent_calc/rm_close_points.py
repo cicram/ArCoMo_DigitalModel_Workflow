@@ -22,8 +22,6 @@ def rm_close_points(point_cloud1, point_cloud2, r=0.35):
 
     reduced_point_cloud = point_cloud1[mask]
 
-    print(f'Successfully removed {len(close_indices_in_cloud1)} close points')
-
     return reduced_point_cloud
 
 
